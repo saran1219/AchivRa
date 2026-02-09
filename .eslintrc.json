@@ -1,0 +1,13 @@
+{
+  "extends": "next/core-web-vitals",
+  "rules": {
+    "@next/next/no-before-interactive-script-outside-document": "warn",
+    "react/style-prop-object": "off",
+    "jsx-a11y/style-props-object": "off",
+    "no-restricted-syntax": "off",
+    "no-unused-expressions": "off",
+    "react/no-unescaped-entities": "off",
+    "react-hooks/exhaustive-deps": "off",
+    "@next/next/no-img-element": "off"
+  }
+}
