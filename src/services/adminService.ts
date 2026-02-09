@@ -6,6 +6,7 @@ export const adminService = {
   // Get all categories
   async getCategories(): Promise<AchievementCategory[]> {
     try {
+      if (!db) throw new Error('Firestore database not initialized');
       const querySnapshot = await getDocs(query(collection(db, 'categories')));
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -22,6 +23,7 @@ export const adminService = {
   // Add category
   async addCategory(name: string, slug: string, description: string, order: number = 0) {
     try {
+      if (!db) throw new Error('Firestore database not initialized');
       await addDoc(collection(db, 'categories'), {
         name,
         slug,
@@ -42,6 +44,7 @@ export const adminService = {
   // Update category
   async updateCategory(categoryId: string, name: string, description: string) {
     try {
+      if (!db) throw new Error('Firestore database not initialized');
       await updateDoc(doc(db, 'categories', categoryId), {
         name,
         description,
@@ -56,6 +59,7 @@ export const adminService = {
   // Delete category
   async deleteCategory(categoryId: string) {
     try {
+      if (!db) throw new Error('Firestore database not initialized');
       await deleteDoc(doc(db, 'categories', categoryId));
     } catch (error) {
       console.error('Error deleting category:', error);
@@ -66,6 +70,7 @@ export const adminService = {
   // Get dashboard statistics
   async getDashboardStats() {
     try {
+      if (!db) throw new Error('Firestore database not initialized');
       const achievementsSnapshot = await getDocs(collection(db, 'achievements'));
       const usersSnapshot = await getDocs(collection(db, 'users'));
 

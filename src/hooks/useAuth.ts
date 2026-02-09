@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
+import { User as FirebaseUser, onAuthStateChanged, Auth } from 'firebase/auth';
 import { auth } from '@/config/firebase';
 import { authService } from '@/services/authService';
 import { User as AppUser, UserRole } from '@/types';
@@ -11,18 +11,25 @@ export const useAuth = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!auth) {
-      setError('Firebase not initialized. Check your environment variables.');
+    const authInstance = auth as Auth | null;
+    if (!authInstance) {
+      setError('Firebase authentication not initialized. Check your environment variables.');
       setLoading(false);
+      console.error('Firebase auth not available:', auth);
       return;
     }
 
     try {
-      const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      const unsubscribe = onAuthStateChanged(authInstance, async (fbUser) => {
         setFirebaseUser(fbUser);
         if (fbUser) {
-          const userProfile = await authService.getUserProfile(fbUser.uid);
-          setUser(userProfile);
+          try {
+            const userProfile = await authService.getUserProfile(fbUser.uid);
+            setUser(userProfile);
+          } catch (err) {
+            console.error('Error fetching user profile:', err);
+            setError(err instanceof Error ? err.message : 'Failed to load user profile');
+          }
         } else {
           setUser(null);
         }
@@ -34,6 +41,7 @@ export const useAuth = () => {
       const errorMessage = err instanceof Error ? err.message : 'Auth initialization failed';
       setError(errorMessage);
       setLoading(false);
+      console.error('Auth error:', err);
     }
   }, []);
 

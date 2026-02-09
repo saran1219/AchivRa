@@ -29,6 +29,7 @@ export const achievementService = {
     tags: string[] = []
   ) {
     try {
+      if (!db) throw new Error('Firestore database not initialized');
       const docRef = await addDoc(collection(db, 'achievements'), {
         studentId,
         studentEmail,
@@ -63,6 +64,8 @@ export const achievementService = {
   // Upload certificate file
   async uploadCertificate(achievementId: string, studentId: string, file: File) {
     try {
+      if (!storage) throw new Error('Cloud Storage not initialized');
+      if (!db) throw new Error('Firestore database not initialized');
       const storageRef = ref(storage, `certificates/${studentId}/${achievementId}_${file.name}`);
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
@@ -85,6 +88,7 @@ export const achievementService = {
   // Get student achievements
   async getStudentAchievements(studentId: string): Promise<Achievement[]> {
     try {
+      if (!db) throw new Error('Firestore database not initialized');
       const q = query(
         collection(db, 'achievements'),
         where('studentId', '==', studentId)
@@ -112,6 +116,7 @@ export const achievementService = {
   // Get all pending achievements (for verification)
   async getPendingAchievements(): Promise<Achievement[]> {
     try {
+      if (!db) throw new Error('Firestore database not initialized');
       const q = query(
         collection(db, 'achievements'),
         where('status', '==', AchievementStatus.PENDING)
@@ -139,6 +144,7 @@ export const achievementService = {
   // Get all achievements
   async getAllAchievements(): Promise<Achievement[]> {
     try {
+      if (!db) throw new Error('Firestore database not initialized');
       const q = query(collection(db, 'achievements'), orderBy('submittedAt', 'desc'));
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map((doc) => ({
@@ -164,6 +170,7 @@ export const achievementService = {
     verifiedByName: string = ''
   ) {
     try {
+      if (!db) throw new Error('Firestore database not initialized');
       await updateDoc(doc(db, 'achievements', achievementId), {
         status,
         remarks,
@@ -181,6 +188,8 @@ export const achievementService = {
   // Delete achievement
   async deleteAchievement(achievementId: string, certificateUrl: string) {
     try {
+      if (!storage) throw new Error('Cloud Storage not initialized');
+      if (!db) throw new Error('Firestore database not initialized');
       if (certificateUrl) {
         const storageRef = ref(storage, certificateUrl);
         await deleteObject(storageRef);

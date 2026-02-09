@@ -6,6 +6,7 @@ export const notificationService = {
   // Create notification
   async createNotification(userId: string, type: string, title: string, message: string, relatedAchievementId?: string, relatedAchievementTitle?: string) {
     try {
+      if (!db) throw new Error('Firestore database not initialized');
       await addDoc(collection(db, 'notifications'), {
         userId,
         type,
@@ -28,6 +29,7 @@ export const notificationService = {
   // Get user notifications
   async getUserNotifications(userId: string): Promise<Notification[]> {
     try {
+      if (!db) throw new Error('Firestore database not initialized');
       const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs
@@ -55,6 +57,7 @@ export const notificationService = {
   // Mark notification as read
   async markAsRead(notificationId: string) {
     try {
+      if (!db) throw new Error('Firestore database not initialized');
       await updateDoc(doc(db, 'notifications', notificationId), {
         isRead: true,
         readAt: Timestamp.now(),
@@ -68,6 +71,7 @@ export const notificationService = {
   // Delete notification
   async deleteNotification(notificationId: string) {
     try {
+      if (!db) throw new Error('Firestore database not initialized');
       await deleteDoc(doc(db, 'notifications', notificationId));
     } catch (error) {
       console.error('Error deleting notification:', error);

@@ -16,6 +16,8 @@ export const authService = {
   // Register a new user
   async register(email: string, password: string, displayName: string, role: UserRole, department: string) {
     try {
+      if (!auth) throw new Error('Firebase authentication not initialized');
+      if (!db) throw new Error('Firestore database not initialized');
       console.log('🔷 Starting registration for:', email, 'Role:', role);
       await setPersistence(auth, browserLocalPersistence);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -65,6 +67,7 @@ export const authService = {
   // Login user
   async login(email: string, password: string) {
     try {
+      if (!auth) throw new Error('Firebase authentication not initialized');
       await setPersistence(auth, browserLocalPersistence);
       
       // First, authenticate with Firebase
@@ -101,6 +104,7 @@ export const authService = {
   // Logout user
   async logout() {
     try {
+      if (!auth) throw new Error('Firebase authentication not initialized');
       await signOut(auth);
     } catch (error) {
       throw error;
@@ -110,6 +114,7 @@ export const authService = {
   // Get user profile from Firestore with retry logic
   async getUserProfile(uid: string): Promise<AppUser | null> {
     try {
+      if (!db) throw new Error('Firestore database not initialized');
       const docRef = doc(db, 'users', uid);
       let docSnap = await getDoc(docRef);
       
@@ -147,12 +152,14 @@ export const authService = {
 
   // Get current user
   getCurrentUser(): User | null {
+    if (!auth) return null;
     return auth.currentUser;
   },
 
   // Get all users with a specific role
   async getUsersByRole(role: UserRole): Promise<AppUser[]> {
     try {
+      if (!db) throw new Error('Firestore database not initialized');
       const q = query(collection(db, 'users'), where('role', '==', role));
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map((doc) => doc.data() as AppUser);
@@ -165,6 +172,8 @@ export const authService = {
   // Google Sign-In (Login only - requires pre-existing account)
   async signInWithGoogle(_selectedRole?: UserRole, _selectedDept?: string) {
     try {
+      if (!auth) throw new Error('Firebase authentication not initialized');
+      if (!db) throw new Error('Firestore database not initialized');
       await setPersistence(auth, browserLocalPersistence);
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
@@ -206,6 +215,8 @@ export const authService = {
   // Google Sign-Up (Registration - creates new account)
   async signUpWithGoogle(selectedRole: UserRole, selectedDept: string) {
     try {
+      if (!auth) throw new Error('Firebase authentication not initialized');
+      if (!db) throw new Error('Firestore database not initialized');
       await setPersistence(auth, browserLocalPersistence);
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
