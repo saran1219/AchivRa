@@ -11,18 +11,30 @@ export const useAuth = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      setFirebaseUser(fbUser);
-      if (fbUser) {
-        const userProfile = await authService.getUserProfile(fbUser.uid);
-        setUser(userProfile);
-      } else {
-        setUser(null);
-      }
+    if (!auth) {
+      setError('Firebase not initialized. Check your environment variables.');
       setLoading(false);
-    });
+      return;
+    }
 
-    return unsubscribe;
+    try {
+      const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+        setFirebaseUser(fbUser);
+        if (fbUser) {
+          const userProfile = await authService.getUserProfile(fbUser.uid);
+          setUser(userProfile);
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
+      });
+
+      return unsubscribe;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Auth initialization failed';
+      setError(errorMessage);
+      setLoading(false);
+    }
   }, []);
 
   const register = useCallback(
