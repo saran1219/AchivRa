@@ -3,6 +3,7 @@ import { User as FirebaseUser, onAuthStateChanged, Auth } from 'firebase/auth';
 import { auth } from '@/config/firebase';
 import { authService } from '@/services/authService';
 import { User as AppUser, UserRole } from '@/types';
+import { getFirebaseErrorMessage } from '@/utils/firebaseErrors';
 
 export const useAuth = () => {
   const [user, setUser] = useState<AppUser | null>(null);

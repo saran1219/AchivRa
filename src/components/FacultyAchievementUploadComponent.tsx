@@ -142,7 +142,8 @@ export const FacultyAchievementUploadComponent = () => {
         AchievementStatus.APPROVED,
         'Achievement uploaded and approved by faculty',
         user.id,
-        user.name
+        user.name,
+        user.department || ''
       );
 
       // Send notification to student

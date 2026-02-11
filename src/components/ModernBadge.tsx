@@ -21,7 +21,7 @@ export const ModernBadge: React.FC<ModernBadgeProps> = ({
     warning: 'bg-amber-100 text-amber-700',
     error: 'bg-red-100 text-red-700',
     info: 'bg-blue-100 text-blue-700',
-    primary: 'bg-[#5F4A8B]/20 text-[#5F4A8B]',
+    primary: 'bg-[#001a4d]/10 text-[#001a4d]',
   };
 
   const sizeClasses = {

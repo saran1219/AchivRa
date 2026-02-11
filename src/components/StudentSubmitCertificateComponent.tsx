@@ -191,17 +191,17 @@ export const StudentSubmitCertificateComponent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FEFACD]">
+    <div className="min-h-screen bg-gradient-to-br from-[#001a4d] to-[#0033a0] animate-fade-in">
       {/* Toast Notifications */}
-      <div className="fixed top-20 right-6 space-y-3 z-50">
+      <div className="fixed top-24 right-6 space-y-3 z-50">
         {toasts.map(toast => (
           <div
             key={toast.id}
-            className={`animate-slide-in-right px-5 py-3 rounded-lg shadow-lg text-white text-sm font-medium max-w-xs transition-all duration-300 ${
-              toast.type === 'success' ? 'bg-emerald-500' :
-              toast.type === 'error' ? 'bg-red-500' :
-              toast.type === 'warning' ? 'bg-amber-500' :
-              'bg-blue-500'
+            className={`animate-slide-in-right px-5 py-3 rounded-xl shadow-2xl text-white text-sm font-bold max-w-xs transition-all duration-300 flex items-center gap-3 backdrop-blur-md border border-white/20 ${
+              toast.type === 'success' ? 'bg-green-500/90' :
+              toast.type === 'error' ? 'bg-red-500/90' :
+              toast.type === 'warning' ? 'bg-amber-500/90' :
+              'bg-blue-500/90'
             }`}
           >
             {toast.message}
@@ -209,12 +209,14 @@ export const StudentSubmitCertificateComponent = () => {
         ))}
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="max-w-5xl mx-auto px-6 py-10">
         {/* Form Card */}
-        <div className="bg-white rounded-xl shadow-sm p-8 border border-[#5F4A8B]/10 mb-10">
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-[#5F4A8B] mb-2">📜 Submit Achievement</h1>
-            <p className="text-gray-600 text-sm">Upload your certificate for faculty verification</p>
+        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-3xl mx-auto animate-fade-in border border-white/20 mb-12">
+          <div className="mb-8 border-b border-gray-100 pb-6">
+            <h1 className="text-3xl font-bold text-[#001a4d] mb-2 flex items-center gap-3">
+              <span>📜</span> Submit Achievement
+            </h1>
+            <p className="text-gray-500 text-lg">Upload your certificate for faculty verification</p>
           </div>
 
           {/* Form */}
@@ -222,39 +224,44 @@ export const StudentSubmitCertificateComponent = () => {
             {/* Row 1: Title + Category */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-[#5F4A8B] mb-2">Achievement Title *</label>
+                <label className="block text-sm font-bold text-[#001a4d] mb-2 uppercase tracking-wide">Achievement Title *</label>
                 <input
                   type="text"
                   required
                   value={formData.title}
                   onChange={(e) => setFormData({...formData, title: e.target.value})}
                   placeholder="e.g., Best Project Award"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5F4A8B] focus:ring-2 focus:ring-[#5F4A8B]/10 transition text-sm"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#001a4d] focus:ring-0 text-gray-700 transition-all font-medium bg-gray-50 focus:bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#5F4A8B] mb-2">Category *</label>
-                <select
-                  aria-label="Achievement category"
-                  title="Select achievement category"
-                  required
-                  value={formData.category}
-                  onChange={(e) => setFormData({...formData, category: e.target.value})}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5F4A8B] focus:ring-2 focus:ring-[#5F4A8B]/10 transition text-sm"
-                >
-                  <option value="">Select category...</option>
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+                <label className="block text-sm font-bold text-[#001a4d] mb-2 uppercase tracking-wide">Category *</label>
+                <div className="relative">
+                  <select
+                    aria-label="Achievement category"
+                    title="Select achievement category"
+                    required
+                    value={formData.category}
+                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#001a4d] focus:ring-0 text-gray-700 transition-all font-medium bg-gray-50 focus:bg-white appearance-none cursor-pointer"
+                  >
+                    <option value="">Select category...</option>
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500">
+                    ▼
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Row 2: Organization + Date */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-[#5F4A8B] mb-2">Organization/Event *</label>
+                <label className="block text-sm font-bold text-[#001a4d] mb-2 uppercase tracking-wide">Organization/Event *</label>
                 <input
                   type="text"
                   required
@@ -262,38 +269,38 @@ export const StudentSubmitCertificateComponent = () => {
                   value={formData.organizationName}
                   onChange={(e) => setFormData({...formData, organizationName: e.target.value})}
                   placeholder="e.g., IEEE, Company, Hackathon"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5F4A8B] focus:ring-2 focus:ring-[#5F4A8B]/10 transition text-sm"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#001a4d] focus:ring-0 text-gray-700 transition-all font-medium bg-gray-50 focus:bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#5F4A8B] mb-2">Date *</label>
+                <label className="block text-sm font-bold text-[#001a4d] mb-2 uppercase tracking-wide">Date *</label>
                 <input
                   type="date"
                   required
                   title="Event date"
                   value={formData.eventDate}
                   onChange={(e) => setFormData({...formData, eventDate: e.target.value})}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5F4A8B] focus:ring-2 focus:ring-[#5F4A8B]/10 transition text-sm"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#001a4d] focus:ring-0 text-gray-700 transition-all font-medium bg-gray-50 focus:bg-white"
                 />
               </div>
             </div>
 
             {/* Full Width: Description */}
             <div>
-              <label className="block text-sm font-semibold text-[#5F4A8B] mb-2">Description</label>
+              <label className="block text-sm font-bold text-[#001a4d] mb-2 uppercase tracking-wide">Description</label>
               <textarea
                 required
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
                 placeholder="Describe your achievement briefly..."
                 rows={3}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5F4A8B] focus:ring-2 focus:ring-[#5F4A8B]/10 transition text-sm resize-none"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#001a4d] focus:ring-0 text-gray-700 transition-all font-medium bg-gray-50 focus:bg-white resize-none"
               />
             </div>
 
             {/* File Upload */}
-            <div className="bg-[#5F4A8B]/5 p-6 rounded-lg border-2 border-dashed border-[#5F4A8B]/30 hover:border-[#5F4A8B]/50 transition-colors">
+            <div className="bg-blue-50/50 p-8 rounded-2xl border-2 border-dashed border-blue-200 hover:border-[#001a4d] transition-all group cursor-pointer text-center">
               <input
                 type="file"
                 accept="image/*,.pdf"
@@ -301,34 +308,54 @@ export const StudentSubmitCertificateComponent = () => {
                 className="hidden"
                 id="cert-file-input"
               />
-              <label htmlFor="cert-file-input" className="cursor-pointer block text-center">
-                <div className="text-3xl mb-3">📄</div>
-                <p className="text-sm font-semibold text-[#5F4A8B] mb-1">Click to upload certificate</p>
-                <p className="text-xs text-gray-600">PNG, JPG, PDF (max 10MB)</p>
+              <label htmlFor="cert-file-input" className="cursor-pointer block w-full h-full">
+                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl shadow-md mx-auto mb-4 group-hover:scale-110 transition-transform">
+                  {file ? '📄' : '📤'}
+                </div>
+                <p className="text-lg font-bold text-[#001a4d] mb-1 group-hover:text-blue-700 transition-colors">
+                  {file ? 'Change File' : 'Upload Certificate'}
+                </p>
+                <p className="text-sm text-gray-500 font-medium">PNG, JPG, PDF (max 10MB)</p>
               </label>
+              
               {file && (
-                <div className="mt-4 p-3 text-sm text-emerald-700 bg-emerald-50/50 border border-emerald-200 rounded">
-                  ✓ {file.name}
+                <div className="mt-6 p-4 bg-white border border-green-200 rounded-xl shadow-sm flex items-center justify-between animate-fade-in">
+                  <div className="flex items-center gap-3">
+                    <span className="text-green-500 text-xl">✓</span>
+                    <div className="text-left">
+                      <p className="font-bold text-gray-800 text-sm truncate max-w-[200px]">{file.name}</p>
+                      <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => { setFile(null); setPreview(''); }}
+                    className="text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    ✕
+                  </button>
                 </div>
               )}
+              
               {preview && (
                 <div className="mt-4">
-                  <img src={preview} alt="Preview" className="max-h-40 mx-auto rounded border border-[#5F4A8B]/20" />
+                  <img src={preview} alt="Preview" className="max-h-48 mx-auto rounded-lg border-4 border-white shadow-lg transform rotate-2" />
                 </div>
               )}
             </div>
 
             {/* Upload Progress */}
             {uploadProgress > 0 && uploadProgress < 100 && (
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs font-semibold text-gray-700">Uploading...</span>
-                  <span className="text-xs font-semibold text-gray-700">{uploadProgress}%</span>
+                  <span className="text-xs font-bold text-[#001a4d] uppercase tracking-wide">Uploading...</span>
+                  <span className="text-xs font-bold text-[#001a4d]">{uploadProgress}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                  {/* @ts-ignore - CSS custom properties require inline styles for dynamic values */}
-                  {/* eslint-disable-next-line */}
-                  <div className="bg-[#5F4A8B] h-2 rounded-full transition-all duration-300 progress-bar" style={{'--progress-width': `${uploadProgress}%`} as React.CSSProperties}></div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                  <div 
+                    className="bg-yellow-400 h-full rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(250,204,21,0.5)]" 
+                    style={{width: `${uploadProgress}%`}}
+                  ></div>
                 </div>
               </div>
             )}
@@ -338,15 +365,17 @@ export const StudentSubmitCertificateComponent = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2.5 bg-[#5F4A8B] text-white rounded-lg font-semibold text-sm hover:shadow-lg hover:shadow-[#5F4A8B]/30 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-300 flex items-center gap-2"
+                className="px-8 py-4 bg-yellow-400 text-[#001a4d] rounded-xl font-bold text-lg hover:bg-yellow-300 hover:shadow-xl hover:shadow-yellow-400/20 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-300 flex items-center gap-3 w-full md:w-auto justify-center"
               >
                 {loading ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-3 border-[#001a4d] border-t-transparent rounded-full animate-spin" />
                     Submitting...
                   </>
                 ) : (
-                  <>📤 Submit</>
+                  <>
+                    <span>🚀</span> Submit for Verification
+                  </>
                 )}
               </button>
             </div>
@@ -354,52 +383,61 @@ export const StudentSubmitCertificateComponent = () => {
         </div>
 
         {/* Submitted Achievements */}
-        <div>
-          <h2 className="text-2xl font-bold text-[#5F4A8B] mb-4">📜 Your Submissions</h2>
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+             <span>📜</span> Your Submission History
+          </h2>
           
           {submittedLoading ? (
             <div className="flex items-center justify-center py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#5F4A8B] border-t-transparent"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent"></div>
             </div>
           ) : submittedAchievements.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm p-12 text-center border border-[#5F4A8B]/10">
-              <div className="text-4xl mb-3">📭</div>
-              <h3 className="text-lg font-semibold text-gray-800">No Submissions Yet</h3>
-              <p className="text-gray-600 text-sm mt-2">Submit your first achievement above</p>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-12 text-center border border-white/20 text-white">
+              <div className="text-5xl mb-4 opacity-80">📭</div>
+              <h3 className="text-xl font-bold mb-2">No Submissions Yet</h3>
+              <p className="text-blue-100 opacity-80">Submit your first achievement above to get started!</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {submittedAchievements.map((achievement) => (
                 <div
                   key={achievement.id}
-                  className="bg-white rounded-lg shadow-sm border border-[#5F4A8B]/10 p-4 hover:shadow-md transition-all duration-300"
+                  className="bg-white/95 backdrop-blur-sm rounded-xl border border-white/20 p-5 hover:bg-white hover:shadow-xl hover:scale-[1.01] transition-all duration-300 cursor-default group"
                 >
                   <div className="flex items-start justify-between gap-4 flex-wrap">
                     {/* Left Content */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-[#5F4A8B] text-sm truncate">{achievement.title}</h3>
-                      <div className="flex items-center gap-3 mt-2 flex-wrap">
-                        <span className="inline-block text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">{achievement.category}</span>
-                        <span className="text-xs text-gray-600">🏢 {achievement.organizationName}</span>
-                        <span className="text-xs text-gray-600">📅 {new Date(achievement.eventDate).toLocaleDateString()}</span>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-2xl">
+                           {achievement.status === 'approved' && '✅'}
+                           {achievement.status === 'rejected' && '❌'}
+                           {achievement.status === 'pending' && '⏳'}
+                        </span>
+                        <h3 className="font-bold text-[#001a4d] text-base truncate group-hover:text-blue-700 transition-colors">{achievement.title}</h3>
+                      </div>
+                      <div className="flex items-center gap-3 mt-2 flex-wrap text-sm font-medium pl-9">
+                        <span className="inline-block bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100 uppercase tracking-wide">{achievement.category}</span>
+                        <span className="text-gray-500">🏢 {achievement.organizationName}</span>
+                        <span className="text-gray-500">📅 {new Date(achievement.eventDate).toLocaleDateString()}</span>
                       </div>
                     </div>
 
                     {/* Status Badge */}
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 self-center">
                       {achievement.status === 'approved' && (
-                        <div className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
-                          ✅ Approved
+                        <div className="px-4 py-1.5 bg-green-100 text-green-800 rounded-lg text-xs font-bold border border-green-200">
+                          Verified
                         </div>
                       )}
                       {achievement.status === 'pending' && (
-                        <div className="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">
-                          ⏳ Pending
+                        <div className="px-4 py-1.5 bg-yellow-100 text-yellow-800 rounded-lg text-xs font-bold border border-yellow-200">
+                          In Review
                         </div>
                       )}
                       {achievement.status === 'rejected' && (
-                        <div className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
-                          ❌ Rejected
+                        <div className="px-4 py-1.5 bg-red-100 text-red-800 rounded-lg text-xs font-bold border border-red-200">
+                          Rejected
                         </div>
                       )}
                     </div>
@@ -407,9 +445,9 @@ export const StudentSubmitCertificateComponent = () => {
 
                   {/* Remarks */}
                   {achievement.remarks && (
-                    <div className="mt-3 pt-3 border-t border-gray-200 text-xs">
-                      <p className="font-semibold text-gray-700 mb-1">Feedback:</p>
-                      <p className="text-gray-600">{achievement.remarks}</p>
+                    <div className="mt-4 pt-3 border-t border-gray-100 pl-9">
+                      <p className="text-xs font-bold text-[#001a4d] uppercase tracking-wide mb-1 opacity-70">Faculty Feedback</p>
+                      <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-100 italic">"{achievement.remarks}"</p>
                     </div>
                   )}
                 </div>
@@ -418,6 +456,14 @@ export const StudentSubmitCertificateComponent = () => {
           )}
         </div>
       </div>
+
+      <style jsx>{`
+         @keyframes slide-in-right {
+          from { opacity: 0; transform: translateX(50px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        .animate-slide-in-right { animation: slide-in-right 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+      `}</style>
     </div>
   );
 };

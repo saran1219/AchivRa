@@ -5,6 +5,7 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  getDoc,
   query,
   where,
   orderBy,
@@ -141,6 +142,35 @@ export const achievementService = {
     }
   },
 
+  // Get pending achievements for a specific department (for faculty verification)
+  async getPendingAchievementsByDepartment(department: string): Promise<Achievement[]> {
+    try {
+      if (!db) throw new Error('Firestore database not initialized');
+      const q = query(
+        collection(db, 'achievements'),
+        where('status', '==', AchievementStatus.PENDING),
+        where('department', '==', department)
+      );
+      const querySnapshot = await getDocs(q);
+      const achievements = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        eventDate: doc.data().eventDate?.toDate() || new Date(),
+        submittedAt: doc.data().submittedAt?.toDate() || new Date(),
+        updatedAt: doc.data().updatedAt?.toDate() || new Date(),
+        verificationDate: doc.data().verificationDate?.toDate() || null,
+      })) as Achievement[];
+      
+      // Sort by submittedAt in descending order (newest first)
+      return achievements.sort((a, b) => 
+        new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+      );
+    } catch (error) {
+      console.error('Error fetching pending achievements by department:', error);
+      return [];
+    }
+  },
+
   // Get all achievements
   async getAllAchievements(): Promise<Achievement[]> {
     try {
@@ -161,16 +191,33 @@ export const achievementService = {
     }
   },
 
-  // Update achievement status
+  // Update achievement status with department verification
   async updateAchievementStatus(
     achievementId: string,
     status: AchievementStatus,
     remarks: string = '',
     verifiedBy: string = '',
-    verifiedByName: string = ''
+    verifiedByName: string = '',
+    verifierDepartment: string = ''
   ) {
     try {
       if (!db) throw new Error('Firestore database not initialized');
+      
+      // Get the achievement to check department
+      const achievementDoc = await getDoc(doc(db, 'achievements', achievementId));
+      if (!achievementDoc.exists()) {
+        throw new Error('Achievement not found');
+      }
+      
+      const achievement = achievementDoc.data() as Achievement;
+      
+      // Verify department match - only faculty from the same department can approve
+      if (verifierDepartment && achievement.studentDepartment) {
+        if (verifierDepartment !== achievement.studentDepartment) {
+          throw new Error(`Cannot approve this certificate. Faculty must be from the same department (${achievement.studentDepartment}) as the student to approve their certificates.`);
+        }
+      }
+      
       await updateDoc(doc(db, 'achievements', achievementId), {
         status,
         remarks,

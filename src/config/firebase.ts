@@ -1,7 +1,7 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import { getStorage, FirebaseStorage } from 'firebase/storage';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth, Auth, connectAuthEmulator } from 'firebase/auth';
+import { getFirestore, Firestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getStorage, FirebaseStorage, connectStorageEmulator } from 'firebase/storage';
 
 // Use environment variables with fallbacks for runtime access
 const firebaseConfig = {
@@ -34,21 +34,32 @@ let storage: FirebaseStorage | null = null;
 
 if (isValidConfig) {
   try {
-    const app = initializeApp(firebaseConfig);
+    // Initialize Firebase - check if already initialized
+    let app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    
     auth = getAuth(app);
     db = getFirestore(app);
     storage = getStorage(app);
-  } catch (error) {
-    console.error('Firebase initialization error:', error);
+    
+    // Set auth persistence
+    if (typeof window !== 'undefined') {
+      // Configure auth settings for better error handling
+      auth.useDeviceLanguage();
+    }
+    
+    console.log('✅ Firebase initialized successfully for project:', firebaseConfig.projectId);
+  } catch (error: any) {
+    console.error('❌ Firebase initialization error:', error?.message || error);
   }
 }
 
 if (!auth) {
-  console.warn('Firebase not initialized. Check your environment variables.');
+  console.warn('⚠️ Firebase not initialized. Check your environment variables.');
   console.warn('Config:', {
     apiKey: firebaseConfig.apiKey ? '***' : 'missing',
     authDomain: firebaseConfig.authDomain || 'missing',
     projectId: firebaseConfig.projectId || 'missing',
+    storageBucket: firebaseConfig.storageBucket || 'missing',
   });
 }
 

@@ -101,13 +101,13 @@ export default function DashboardPage() {
               </div>
 
               {/* Welcome Card */}
-              <div className="bg-white rounded-xl shadow-sm p-6 border border-[#5F4A8B]/10">
+              <div className="bg-white rounded-xl shadow-sm p-6 border border-[#001a4d]/10">
                 <div className="flex items-center gap-4">
                   <div className="text-4xl">👋</div>
                   <div className="flex-1">
-                    <h2 className="text-xl font-bold text-[#5F4A8B]">Welcome, {user.name}!</h2>
+                    <h2 className="text-xl font-bold text-[#001a4d]">Welcome, {user.name}!</h2>
                     <p className="text-gray-600 text-sm mt-1">
-                      You are logged in as <strong>{user.role.charAt(0).toUpperCase() + user.role.slice(1)}</strong> • Department: <strong>{user.department}</strong>
+                      You are logged in as <strong>{user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'User'}</strong> • Department: <strong className="text-[#001a4d] font-bold">{user.department || 'Not assigned'}</strong>
                     </p>
                   </div>
                 </div>

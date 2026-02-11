@@ -68,7 +68,7 @@ export const HorizontalListItem: React.FC<HorizontalListItemProps> = ({
       onClick={onClick}
       className={`flex-shrink-0 w-72 p-4 rounded-xl transition-all duration-300 cursor-pointer ${
         isSelected
-          ? 'bg-[#5F4A8B] text-white shadow-lg'
+          ? 'bg-[#001a4d] text-white shadow-lg border-l-4 border-yellow-400'
           : 'bg-white text-gray-900 shadow-sm hover:shadow-md'
       } ${className}`}
     >

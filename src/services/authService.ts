@@ -7,10 +7,13 @@ import {
   User,
   signInWithPopup,
   GoogleAuthProvider,
+  signInWithRedirect,
+  getRedirectResult,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
 import { User as AppUser, UserRole } from '@/types';
+import { getFirebaseErrorMessage, isNetworkError, shouldRetry } from '@/utils/firebaseErrors';
 
 export const authService = {
   // Register a new user
@@ -58,9 +61,10 @@ export const authService = {
       console.log('🔷 Registration complete, user:', email, 'role:', role);
       return user;
     } catch (error: any) {
-      const errorMessage = error?.message || 'Registration failed';
-      console.error('🔷 Registration error:', errorMessage);
-      throw new Error(errorMessage);
+      // Use the error message utility for user-friendly messages
+      const userMessage = getFirebaseErrorMessage(error);
+      console.error('🔷 Registration error:', userMessage);
+      throw new Error(userMessage);
     }
   },
 
@@ -87,17 +91,10 @@ export const authService = {
       console.log('🔷 User logged in successfully:', email, 'Role:', userProfile.role, 'Department:', userProfile.department);
       return user;
     } catch (error: any) {
-      // Handle specific Firebase auth errors
-      if (error.code === 'auth/user-not-found') {
-        throw new Error('No account found with this email. Please register first.');
-      } else if (error.code === 'auth/wrong-password') {
-        throw new Error('Incorrect password. Please try again.');
-      } else if (error.code === 'auth/invalid-email') {
-        throw new Error('Invalid email address.');
-      } else if (error.message?.includes('User account not found')) {
-        throw error; // Re-throw our custom message
-      }
-      throw error;
+      // Use the error message utility for user-friendly messages
+      const userMessage = getFirebaseErrorMessage(error);
+      console.error('🔷 Login error:', userMessage);
+      throw new Error(userMessage);
     }
   },
 
@@ -174,11 +171,38 @@ export const authService = {
     try {
       if (!auth) throw new Error('Firebase authentication not initialized');
       if (!db) throw new Error('Firestore database not initialized');
+      
       await setPersistence(auth, browserLocalPersistence);
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
+      provider.addScope('profile');
+      provider.addScope('email');
+      
+      let result;
+      try {
+        // Try popup first
+        console.log('🔷 Attempting Google sign-in with popup...');
+        result = await signInWithPopup(auth, provider);
+      } catch (popupError: any) {
+        console.warn('🔷 Popup failed, trying redirect method:', popupError?.code);
+        
+        // If popup fails, try redirect (works better in some browsers)
+        if (popupError?.code === 'auth/popup-blocked' || popupError?.code === 'auth/internal-error') {
+          console.log('🔷 Attempting Google sign-in with redirect...');
+          await signInWithRedirect(auth, provider);
+          
+          // Wait for redirect result
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          result = await getRedirectResult(auth);
+          
+          if (!result) {
+            throw new Error('Redirect sign-in failed. Please try again.');
+          }
+        } else {
+          throw popupError;
+        }
+      }
+      
       const user = result.user;
-
       console.log('🔷 Google sign-in attempt for:', user.email);
 
       // Check if user exists in Firestore
@@ -206,9 +230,10 @@ export const authService = {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       return user;
-    } catch (error) {
+    } catch (error: any) {
       console.error('🔷 Google sign-in error:', error);
-      throw error;
+      const userMessage = getFirebaseErrorMessage(error);
+      throw new Error(userMessage);
     }
   },
 
@@ -217,11 +242,38 @@ export const authService = {
     try {
       if (!auth) throw new Error('Firebase authentication not initialized');
       if (!db) throw new Error('Firestore database not initialized');
+      
       await setPersistence(auth, browserLocalPersistence);
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
+      provider.addScope('profile');
+      provider.addScope('email');
+      
+      let result;
+      try {
+        // Try popup first
+        console.log('🔷 Attempting Google sign-up with popup...');
+        result = await signInWithPopup(auth, provider);
+      } catch (popupError: any) {
+        console.warn('🔷 Popup failed, trying redirect method:', popupError?.code);
+        
+        // If popup fails, try redirect (works better in some browsers)
+        if (popupError?.code === 'auth/popup-blocked' || popupError?.code === 'auth/internal-error') {
+          console.log('🔷 Attempting Google sign-up with redirect...');
+          await signInWithRedirect(auth, provider);
+          
+          // Wait for redirect result
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          result = await getRedirectResult(auth);
+          
+          if (!result) {
+            throw new Error('Redirect sign-up failed. Please try again.');
+          }
+        } else {
+          throw popupError;
+        }
+      }
+      
       const user = result.user;
-
       console.log('🔷 Google sign-up attempt for:', user.email, 'Role:', selectedRole, 'Dept:', selectedDept);
 
       // Check if user exists in Firestore
@@ -247,22 +299,20 @@ export const authService = {
         });
         console.log('🔷 SUCCESS! Google account created with role:', selectedRole, 'department:', selectedDept);
       } else {
-        // Account already exists, just update last login
-        console.log('🔷 Google account already exists, updating last login');
-        await setDoc(
-          doc(db, 'users', user.uid),
-          { lastLogin: new Date(), updatedAt: new Date() },
-          { merge: true }
-        );
+        // Account already exists, cannot sign up with existing email
+        console.log('🔷 Google account already exists with this email');
+        await signOut(auth);
+        throw new Error('The email ID is already existed. Try with another email.');
       }
 
       // Give Firestore a moment to sync
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       return user;
-    } catch (error) {
+    } catch (error: any) {
       console.error('🔷 Google sign-up error:', error);
-      throw error;
+      const userMessage = getFirebaseErrorMessage(error);
+      throw new Error(userMessage);
     }
   },
 };
