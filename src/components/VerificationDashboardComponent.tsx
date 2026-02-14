@@ -12,14 +12,19 @@ interface Toast {
   id: number;
 }
 
-export const FacultyVerificationComponent = () => {
+interface VerificationDashboardProps {
+  initialFilter?: 'pending' | 'approved' | 'rejected' | 'all';
+}
+
+export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: VerificationDashboardProps) => {
   const { user } = useAuth();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
-
-  const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
+  const [remarks, setRemarks] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>(initialFilter);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [showAllModal, setShowAllModal] = useState(false);
@@ -31,7 +36,8 @@ export const FacultyVerificationComponent = () => {
   const loadPendingAchievements = async () => {
     setLoading(true);
     try {
-      // If faculty has a department, load only achievements from their department
+      // If verification team has a department, load only achievements from their department
+      // If not, load all.
       let achievements_list: Achievement[] = [];
       
       if (user?.department) {
@@ -41,7 +47,7 @@ export const FacultyVerificationComponent = () => {
           a.studentDepartment === user.department || a.department === user.department
         );
       } else {
-        // If no department assigned, load all (admin case)
+        // If no department assigned, load all (admin/verification team global)
         achievements_list = await achievementService.getAllAchievements();
       }
       
@@ -91,7 +97,85 @@ export const FacultyVerificationComponent = () => {
     return sorted;
   };
 
+  const handleApprove = async () => {
+    if (!selectedAchievement || !user) return;
 
+    // Department validation - prevent cross-department approval if user has department
+    if (user.department && user.department !== (selectedAchievement.studentDepartment || selectedAchievement.department)) {
+      addToast('❌ Cannot approve: Student is from a different department!', 'error');
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      await achievementService.updateAchievementStatus(
+        selectedAchievement.id,
+        AchievementStatus.APPROVED,
+        remarks,
+        user.id,
+        user.name,
+        user.department || 'Verification Team'
+      );
+
+      // Send notification to student
+      await notificationService.createNotification(
+        selectedAchievement.studentId,
+        `🎉 Your achievement "${selectedAchievement.title}" has been APPROVED by ${user.name} (${user.department || 'Verification Team'})!`,
+        'approval',
+        selectedAchievement.id
+      );
+
+      addToast('✓ Achievement approved!', 'success');
+      setSelectedAchievement(null);
+      setRemarks('');
+      loadPendingAchievements();
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to approve achievement';
+      addToast(errorMsg, 'error');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedAchievement || !user) return;
+
+    // Department validation - prevent cross-department rejection if user has department
+    if (user.department && user.department !== (selectedAchievement.studentDepartment || selectedAchievement.department)) {
+      addToast('❌ Cannot reject: Student is from a different department!', 'error');
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      await achievementService.updateAchievementStatus(
+        selectedAchievement.id,
+        AchievementStatus.REJECTED,
+        remarks || 'Rejected by verification team',
+        user.id,
+        user.name,
+        user.department || 'Verification Team'
+      );
+
+      // Send notification to student
+      await notificationService.createNotification(
+        selectedAchievement.studentId,
+        `⚠️ Your achievement "${selectedAchievement.title}" has been REJECTED by ${user.name} (${user.department || 'Verification Team'}). Remarks: ${remarks}`,
+        'rejection',
+        selectedAchievement.id
+      );
+
+      addToast('✓ Achievement rejected!', 'success');
+      setSelectedAchievement(null);
+      setRemarks('');
+      loadPendingAchievements();
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to reject achievement';
+      addToast(errorMsg, 'error');
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#001a4d] to-[#0033a0] animate-fade-in">
@@ -116,9 +200,9 @@ export const FacultyVerificationComponent = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-            <span>👨‍🏫</span> Department Achievements
+            <span>🛡️</span> Verification Dashboard
           </h1>
-          <p className="text-blue-100/80 text-lg">View student achievements from your department</p>
+          <p className="text-blue-100/80 text-lg">Review and manage student achievements</p>
         </div>
 
         {/* Controls Bar */}
@@ -362,7 +446,7 @@ export const FacultyVerificationComponent = () => {
                       )}
                       
                       <div className="mt-4 pt-4 border-t border-black/5 pl-9 flex gap-6 text-sm opacity-80 font-medium">
-                         <span>Verified by: {user?.name || 'Faculty'}</span>
+                         <span>Verified by: {user?.name || 'Verifier'}</span>
                          <span>Date: {new Date().toLocaleDateString()}</span>
                       </div>
                     </div>
@@ -371,13 +455,37 @@ export const FacultyVerificationComponent = () => {
 
                 {/* Verification Form */}
                 {selectedAchievement.status === 'pending' && (
-                  <div className="border-t border-gray-100 p-6 bg-yellow-50 flex-shrink-0">
-                    <h3 className="text-sm font-bold text-yellow-800 mb-2 uppercase tracking-wider flex items-center gap-2">
-                       ⏳ Status: Pending Approval
-                    </h3>
-                    <p className="text-sm text-yellow-700">
-                      This achievement is awaiting verification by the Verification Team. You can view the details but cannot take action.
-                    </p>
+                  <div className="border-t border-gray-100 p-6 bg-gray-50 flex-shrink-0">
+                    <h3 className="text-sm font-bold text-[#001a4d] mb-3 uppercase tracking-wider">Verification Actions</h3>
+                    <div className="flex flex-col gap-4">
+                       <textarea
+                        value={remarks}
+                        onChange={(e) => setRemarks(e.target.value)}
+                        placeholder="Add remarks or feedback for the student..."
+                        rows={2}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#001a4d] focus:ring-1 focus:ring-[#001a4d] text-sm resize-none bg-white transition-shadow focus:shadow-md"
+                      />
+                      <div className="flex gap-4">
+                        <button
+                          onClick={handleApprove}
+                          disabled={verifying}
+                          className="flex-1 px-6 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 hover:shadow-lg hover:shadow-green-500/30 disabled:opacity-50 transition-all transform active:scale-95 font-bold flex items-center justify-center gap-2 text-lg"
+                        >
+                          {verifying ? (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          ) : '✅ Approve'}
+                        </button>
+                        <button
+                          onClick={handleReject}
+                          disabled={verifying}
+                          className="flex-1 px-6 py-3 bg-white text-red-500 border-2 border-red-100 hover:bg-red-50 hover:border-red-200 hover:shadow-lg disabled:opacity-50 transition-all transform active:scale-95 font-bold flex items-center justify-center gap-2 text-lg"
+                        >
+                          {verifying ? (
+                            <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                          ) : '❌ Reject'}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

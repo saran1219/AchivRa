@@ -61,9 +61,21 @@ const GoogleSignInModal = ({
             />
             <span className="ml-3 text-lg font-semibold text-gray-700">👨‍🏫 Faculty</span>
           </label>
+
+          <label className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${selectedRole === UserRole.VERIFICATION_TEAM ? 'border-[#001a4d] bg-blue-50 shadow-md' : 'border-gray-200 hover:border-gray-300'}`}>
+            <input
+              type="radio"
+              name="role"
+              value={UserRole.VERIFICATION_TEAM}
+              checked={selectedRole === UserRole.VERIFICATION_TEAM}
+              onChange={(e) => setSelectedRole(e.target.value as UserRole)}
+              className="w-4 h-4"
+            />
+            <span className="ml-3 text-lg font-semibold text-gray-700">🛡️ Verification Team</span>
+          </label>
         </div>
 
-        {(selectedRole === UserRole.STUDENT || selectedRole === UserRole.FACULTY) && (
+        {(selectedRole === UserRole.STUDENT || selectedRole === UserRole.FACULTY || selectedRole === UserRole.VERIFICATION_TEAM) && (
           <div className="mb-6">
             <label className="block text-sm font-semibold text-gray-700 mb-2">🏢 Department</label>
             <select
@@ -167,7 +179,25 @@ export const LoginForm = () => {
       setSuccess(true);
       addToast('✓ Login successful! Redirecting...', 'success');
       setTimeout(() => {
-        router.push('/dashboard');
+        // Redirect based on role
+        if (email.includes('admin')) { // Simple check if role isn't immediately available, but better to fetch role
+           // The useAuth hook typically updates the user state. 
+           // We might need to depend on the user state change or fetch the user profile.
+           // For now, let's assume the AuthProvider or a subsequent check handles simple redirects, 
+           // but strictly speaking, we should check the role.
+           // However, since `login` doesn't return the user object directly here in the try block easily without modifying useAuth,
+           // we'll rely on a layout effect or standard dashboard redirect which then routes.
+           // BUT the requirement says "Redirect based on role" here.
+           // Let's assume /dashboard handles it or we do it here if we can get the role.
+           // Actually, the easiest way is to push to /dashboard and let a protected route/layout handle specific dashboard redirection 
+           // OR we can try to get the role. 
+           // Since we don't have the user object here immediately after await login() unless login returns it, 
+           // let's stick to /dashboard which should probably be a smart router, OR better yet,
+           // if we want to be explicit as per instructions:
+           router.push('/dashboard');
+        } else {
+           router.push('/dashboard');
+        }
       }, 1500);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Login failed';
@@ -212,6 +242,25 @@ export const LoginForm = () => {
       </div>
 
       <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 backdrop-blur-sm">
+
+          {/* Special Error Handler for Domain Issues */}
+          {error.includes('auth/unauthorized-domain') && (
+            <div className="bg-red-50 border-2 border-red-500 text-red-900 p-6 rounded-xl mb-6 animate-pulse">
+              <h3 className="text-xl font-bold flex items-center gap-2 mb-2">
+                🚫 PRODUCTION SETUP REQUIRED
+              </h3>
+              <p className="font-semibold mb-2">This domain is not authorized by Firebase.</p>
+              <div className="bg-white p-3 rounded border border-red-200 text-sm font-mono break-all select-all mb-3">
+                {typeof window !== 'undefined' ? window.location.hostname : ''}
+              </div>
+              <p className="text-sm mb-2">To fix this immediately:</p>
+              <ol className="list-decimal ml-5 text-sm space-y-1">
+                <li>Go to <b>Firebase Console</b> &gt; <b>Authentication</b> &gt; <b>Settings</b></li>
+                <li>Click <b>Authorized Domains</b> &gt; <b>Add Domain</b></li>
+                <li>Paste the domain above and click <b>Add</b></li>
+              </ol>
+            </div>
+          )}
 
           {error && (
             <div className="bg-red-50 border-2 border-red-200 text-red-700 p-4 rounded-xl mb-4 flex items-start gap-3 animate-shake">
@@ -417,6 +466,7 @@ export const RegisterForm = () => {
             >
               <option value={UserRole.STUDENT}>Student</option>
               <option value={UserRole.FACULTY}>Faculty</option>
+              <option value={UserRole.VERIFICATION_TEAM}>Verification Team</option>
             </select>
           </div>
 

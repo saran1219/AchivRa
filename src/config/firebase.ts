@@ -9,8 +9,8 @@ const firebaseConfig = {
     (window as any).__FIREBASE_API_KEY__ || process.env.NEXT_PUBLIC_FIREBASE_API_KEY : 
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: typeof window !== 'undefined' ? 
-    (window as any).__FIREBASE_AUTH_DOMAIN__ || process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN : 
-    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    (window as any).__FIREBASE_AUTH_DOMAIN__ || process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'achivra-883bf.firebaseapp.com' : 
+    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'achivra-883bf.firebaseapp.com',
   projectId: typeof window !== 'undefined' ? 
     (window as any).__FIREBASE_PROJECT_ID__ || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID : 
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -45,6 +45,7 @@ if (isValidConfig) {
     if (typeof window !== 'undefined') {
       // Configure auth settings for better error handling
       auth.useDeviceLanguage();
+      console.log('🔧 Firebase Auth Domain configured as:', firebaseConfig.authDomain);
     }
     
     console.log('✅ Firebase initialized successfully for project:', firebaseConfig.projectId);

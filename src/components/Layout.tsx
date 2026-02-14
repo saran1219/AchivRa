@@ -92,8 +92,13 @@ export const Sidebar = ({ children }: { children: ReactNode }) => {
       case UserRole.FACULTY:
         return [
           { label: 'Dashboard', href: '/dashboard', icon: '📊' },
-          { label: 'Verify', href: '/faculty/queue', icon: '⏳' },
-          { label: 'Verified', href: '/faculty/verified', icon: '✅' },
+          { label: 'View Students', href: '/faculty/queue', icon: '👥' },
+        ];
+      case UserRole.VERIFICATION_TEAM:
+        return [
+          { label: 'Dashboard', href: '/verification/dashboard', icon: '📊' },
+          { label: 'Verification Queue', href: '/verification/queue', icon: '⏳' },
+          { label: 'Approved List', href: '/verification/approved', icon: '✅' },
         ];
       case UserRole.ADMIN:
         return [

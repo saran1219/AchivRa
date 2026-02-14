@@ -19,10 +19,21 @@ export default function DashboardPage() {
       router.push('/login');
       return;
     }
-    // Redirect students to their achievements page
-    if (!loading && user && user.role === 'student') {
-      router.push('/student/achievements');
-      return;
+    // Redirect based on role
+    if (!loading && user) {
+      if (user.role === 'student') {
+        router.push('/student/achievements');
+      } else if (user.role === 'verification_team') {
+        router.push('/verification/dashboard');
+      } else if (user.role === 'faculty') {
+        // Faculty stays on this dashboard or has their own view
+        // The original code didn't redirect faculty, so they saw the dashboard stats.
+        // We will keep them here or redirect to /faculty/queue if they want to view lists.
+        // However, the task says "Faculty to VIEW-ONLY". 
+        // If we want them to see the view-only queue, we should probably redirect to similar page as verification but view only.
+        // But let's check Step 7: Faculty Sidebar has Dashboard and View Students.
+        // So keeping them on /dashboard for stats is fine, provided stats are relevant.
+      }
     }
   }, [user, loading, router]);
 

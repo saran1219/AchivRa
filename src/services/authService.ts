@@ -184,9 +184,10 @@ export const authService = {
         result = await signInWithPopup(auth, provider);
       } catch (popupError: any) {
         console.warn('🔷 Popup failed, trying redirect method:', popupError?.code);
+        console.warn('🔷 Current Domain:', window.location.hostname);
         
         // If popup fails, try redirect (works better in some browsers)
-        if (popupError?.code === 'auth/popup-blocked' || popupError?.code === 'auth/internal-error') {
+        if (popupError?.code === 'auth/popup-blocked' || popupError?.code === 'auth/internal-error' || popupError?.code === 'auth/unauthorized-domain') {
           console.log('🔷 Attempting Google sign-in with redirect...');
           await signInWithRedirect(auth, provider);
           
@@ -255,9 +256,10 @@ export const authService = {
         result = await signInWithPopup(auth, provider);
       } catch (popupError: any) {
         console.warn('🔷 Popup failed, trying redirect method:', popupError?.code);
+        console.warn('🔷 Current Domain:', window.location.hostname);
         
         // If popup fails, try redirect (works better in some browsers)
-        if (popupError?.code === 'auth/popup-blocked' || popupError?.code === 'auth/internal-error') {
+        if (popupError?.code === 'auth/popup-blocked' || popupError?.code === 'auth/internal-error' || popupError?.code === 'auth/unauthorized-domain') {
           console.log('🔷 Attempting Google sign-up with redirect...');
           await signInWithRedirect(auth, provider);
           

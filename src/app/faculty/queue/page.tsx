@@ -1,8 +1,8 @@
 'use client';
 
-import { FacultyVerificationComponent } from '@/components/FacultyVerificationComponent';
+import { FacultyViewStudentsComponent } from '@/components/FacultyViewStudentsComponent';
 
 export default function FacultyQueuePage() {
-  return <FacultyVerificationComponent />;
+  return <FacultyViewStudentsComponent />;
 }
 
