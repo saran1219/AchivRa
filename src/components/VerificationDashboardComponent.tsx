@@ -36,20 +36,8 @@ export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: Ve
   const loadPendingAchievements = async () => {
     setLoading(true);
     try {
-      // If verification team has a department, load only achievements from their department
-      // If not, load all.
-      let achievements_list: Achievement[] = [];
-      
-      if (user?.department) {
-        // Load all achievements from the same department
-        const allAchievements = await achievementService.getAllAchievements();
-        achievements_list = allAchievements.filter(a => 
-          a.studentDepartment === user.department || a.department === user.department
-        );
-      } else {
-        // If no department assigned, load all (admin/verification team global)
-        achievements_list = await achievementService.getAllAchievements();
-      }
+      // Load all achievements for verification team (global access)
+      const achievements_list = await achievementService.getAllAchievements();
       
       // Filter by status
       const filtered = achievements_list.filter(a => {
@@ -100,11 +88,7 @@ export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: Ve
   const handleApprove = async () => {
     if (!selectedAchievement || !user) return;
 
-    // Department validation - prevent cross-department approval if user has department
-    if (user.department && user.department !== (selectedAchievement.studentDepartment || selectedAchievement.department)) {
-      addToast('❌ Cannot approve: Student is from a different department!', 'error');
-      return;
-    }
+
 
     setVerifying(true);
     try {
@@ -114,7 +98,7 @@ export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: Ve
         remarks,
         user.id,
         user.name,
-        user.department || 'Verification Team'
+        user.role // Passing role
       );
 
       // Send notification to student
@@ -140,11 +124,7 @@ export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: Ve
   const handleReject = async () => {
     if (!selectedAchievement || !user) return;
 
-    // Department validation - prevent cross-department rejection if user has department
-    if (user.department && user.department !== (selectedAchievement.studentDepartment || selectedAchievement.department)) {
-      addToast('❌ Cannot reject: Student is from a different department!', 'error');
-      return;
-    }
+
 
     setVerifying(true);
     try {
@@ -154,7 +134,7 @@ export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: Ve
         remarks || 'Rejected by verification team',
         user.id,
         user.name,
-        user.department || 'Verification Team'
+        user.role // Passing role
       );
 
       // Send notification to student
@@ -381,47 +361,100 @@ export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: Ve
                     </div>
                   </div>
 
-                  {/* Certificate */}
-                  {selectedAchievement.certificateUrl && (
+                  {/* Certificate Proof - Multiple Files Support */}
+                  {((selectedAchievement.fileUrls?.length ?? 0) > 0 || selectedAchievement.certificateUrl) && (
                     <div>
                       <h3 className="text-lg font-bold text-[#001a4d] mb-3 flex items-center gap-2">
                         📜 Certificate Proof
                       </h3>
-                      <div className="border-2 border-dashed border-gray-200 rounded-2xl p-4 hover:border-[#001a4d] transition-colors bg-gray-50/50">
-                        {selectedAchievement.certificateUrl.includes('.pdf') ? (
-                          <a
-                            href={selectedAchievement.certificateUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-4 group p-4 bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all"
-                          >
-                            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center text-2xl text-red-500 group-hover:scale-110 transition-transform">
-                              📄
-                            </div>
-                            <div>
-                               <p className="font-bold text-gray-800 group-hover:text-[#001a4d] transition-colors">Certificate.pdf</p>
-                               <p className="text-xs text-blue-600 font-medium mt-1">Click to view/download</p>
-                            </div>
-                          </a>
-                        ) : (
-                          <div className="relative group rounded-xl overflow-hidden border border-gray-200 shadow-sm">
-                            <img
-                              src={selectedAchievement.certificateUrl}
-                              alt="Certificate"
-                              className="w-full object-contain max-h-[400px] bg-gray-100"
-                            />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                               <a 
-                                 href={selectedAchievement.certificateUrl} 
-                                 target="_blank" 
-                                 rel="noopener noreferrer"
-                                 className="px-6 py-2 bg-white text-gray-900 rounded-lg font-bold hover:bg-yellow-400 transition-colors transform hover:scale-105 shadow-xl"
-                               >
-                                 View Full Size
-                               </a>
-                            </div>
+                      <div className="space-y-3">
+                        {/* Handle new array format */}
+                        {selectedAchievement.fileUrls && selectedAchievement.fileUrls.length > 0 ? (
+                          selectedAchievement.fileUrls.map((url, index) => {
+                            const fileName = selectedAchievement.fileNames?.[index] || `Certificate ${index + 1}`;
+                            const isPdf = url.toLowerCase().includes('.pdf') || fileName.toLowerCase().includes('.pdf');
+                            
+                            return (
+                              <div key={index} className="border-2 border-dashed border-gray-200 rounded-2xl p-4 hover:border-[#001a4d] transition-colors bg-gray-50/50">
+                                {isPdf ? (
+                                  <a
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-4 group p-4 bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all"
+                                  >
+                                    <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center text-2xl text-red-500 group-hover:scale-110 transition-transform">
+                                      📄
+                                    </div>
+                                    <div className="min-w-0">
+                                       <p className="font-bold text-gray-800 group-hover:text-[#001a4d] transition-colors truncate">{fileName}</p>
+                                       <p className="text-xs text-blue-600 font-medium mt-1">Click to view/download</p>
+                                    </div>
+                                  </a>
+                                ) : (
+                                  <div className="relative group rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+                                    <img
+                                      src={url}
+                                      alt={`Certificate ${index + 1}`}
+                                      className="w-full object-contain max-h-[400px] bg-gray-100"
+                                    />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                       <a 
+                                         href={url} 
+                                         target="_blank" 
+                                         rel="noopener noreferrer"
+                                         className="px-6 py-2 bg-white text-gray-900 rounded-lg font-bold hover:bg-yellow-400 transition-colors transform hover:scale-105 shadow-xl"
+                                       >
+                                         View Full Size
+                                       </a>
+                                    </div>
+                                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-2 truncate">
+                                      {fileName}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
+                        ) : selectedAchievement.certificateUrl ? (
+                          /* Backward Compatibility for single file */
+                          <div className="border-2 border-dashed border-gray-200 rounded-2xl p-4 hover:border-[#001a4d] transition-colors bg-gray-50/50">
+                            {selectedAchievement.certificateUrl.includes('.pdf') ? (
+                              <a
+                                href={selectedAchievement.certificateUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-4 group p-4 bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all"
+                              >
+                                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center text-2xl text-red-500 group-hover:scale-110 transition-transform">
+                                  📄
+                                </div>
+                                <div>
+                                   <p className="font-bold text-gray-800 group-hover:text-[#001a4d] transition-colors">Certificate.pdf</p>
+                                   <p className="text-xs text-blue-600 font-medium mt-1">Click to view/download</p>
+                                </div>
+                              </a>
+                            ) : (
+                              <div className="relative group rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+                                <img
+                                  src={selectedAchievement.certificateUrl}
+                                  alt="Certificate"
+                                  className="w-full object-contain max-h-[400px] bg-gray-100"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                   <a 
+                                     href={selectedAchievement.certificateUrl} 
+                                     target="_blank" 
+                                     rel="noopener noreferrer"
+                                     className="px-6 py-2 bg-white text-gray-900 rounded-lg font-bold hover:bg-yellow-400 transition-colors transform hover:scale-105 shadow-xl"
+                                   >
+                                     View Full Size
+                                   </a>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   )}

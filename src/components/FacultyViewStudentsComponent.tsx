@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { achievementService } from '@/services/achievementService';
 import { userService, UserProfile } from '@/services/userService';
 import { Achievement, AchievementCategory } from '@/types';
+import { useRouter } from 'next/navigation';
 import { adminService } from '@/services/adminService';
 
 // Types for internal state
@@ -40,7 +41,7 @@ export const FacultyViewStudentsComponent = () => {
   const [searchTerm, setSearchTerm] = useState('');
   
   // View State
-  const [selectedStudent, setSelectedStudent] = useState<StudentWithStats | null>(null);
+  const router = useRouter();
 
   // Initial Load
   useEffect(() => {
@@ -60,16 +61,9 @@ export const FacultyViewStudentsComponent = () => {
       setCategories(cats);
 
       // 2. Fetch Students
-      // If faculty has department, fetch only their department? 
-      // Requirement says "View all students", but "Grouped by department".
-      // Usually faculty only view their own dept, but let's fetch all for now and filter if needed.
-      // If user is restricted to department, we can enforce that.
-      // But let's fetch all to show the "Directory" feel, or filter client side if easier.
       const allStudents = await userService.getAllStudents();
 
       // 3. Fetch All Achievements to calculate stats
-      // Optimization: In a real app, we might query aggregates or only fetch needed data.
-      // For this scale, fetching all achievements is likely fine.
       const allAchievements = await achievementService.getAllAchievements();
 
       // 4. Merge Data
@@ -108,18 +102,13 @@ export const FacultyViewStudentsComponent = () => {
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       result = result.filter(s => 
-        s.name.toLowerCase().includes(term) || 
-        s.email.toLowerCase().includes(term) ||
+        (s.name || '').toLowerCase().includes(term) || 
+        (s.email || '').toLowerCase().includes(term) ||
         (s.uid && s.uid.toLowerCase().includes(term))
       );
     }
 
-    // 3. Category & Status Filter (Complex: Filter students who HAVE matching achievements?)
-    // Or just filter the displayed achievements?
-    // Requirement: "Filter achievements by category and status" -> This likely implies the Detailed View.
-    // BUT "Filter options... At top of page... filters should dynamically update results".
-    // If I filter by "Sports", should I only show students who have Sports achievements? Yes, usually.
-    
+    // 3. Category & Status Filter
     if (selectedCategory !== 'All' || selectedStatus !== 'All') {
       result = result.filter(s => {
         const matches = s.achievements.some(a => {
@@ -236,15 +225,15 @@ export const FacultyViewStudentsComponent = () => {
                   {deptStudents.map(student => (
                     <div 
                       key={student.uid}
-                      onClick={() => setSelectedStudent(student)}
+                      onClick={() => router.push(`/faculty/students/${student.uid}`)}
                       className="bg-white rounded-xl shadow-lg p-6 hover:scale-105 hover:shadow-2xl transition-all duration-300 cursor-pointer group border border-transparent hover:border-blue-400"
                     >
                       <div className="flex items-center gap-4 mb-4">
                         <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                          {student.name.charAt(0).toUpperCase()}
+                          {(student.name || student.email || '?').charAt(0).toUpperCase()}
                         </div>
                         <div className="overflow-hidden">
-                          <h3 className="font-bold text-gray-800 truncate group-hover:text-blue-700 transition-colors">{student.name}</h3>
+                          <h3 className="font-bold text-gray-800 truncate group-hover:text-blue-700 transition-colors">{student.name || 'Unknown Student'}</h3>
                           <p className="text-xs text-gray-500 truncate">{student.email}</p>
                         </div>
                       </div>
@@ -271,100 +260,6 @@ export const FacultyViewStudentsComponent = () => {
           </div>
         )}
       </div>
-
-      {/* Student Details Modal */}
-      {selectedStudent && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setSelectedStudent(null)}>
-          <div 
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-slide-up"
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-[#001a4d] to-[#0033a0] p-6 text-white flex-shrink-0 flex justify-between items-start">
-              <div>
-                <h2 className="text-2xl font-bold">{selectedStudent.name}</h2>
-                <div className="flex gap-4 mt-2 text-sm text-blue-100 opacity-80">
-                  <span className="flex items-center gap-1">✉️ {selectedStudent.email}</span>
-                  <span className="flex items-center gap-1">🏢 {selectedStudent.department}</span>
-                </div>
-              </div>
-              <button 
-                onClick={() => setSelectedStudent(null)}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <span>📜</span> Achievement History
-              </h3>
-
-              {selectedStudent.achievements.length === 0 ? (
-                <div className="text-center py-10 opacity-60">
-                  <p>No achievements recorded.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Filtered Achievements inside Modal? Logic says "Filter achievements by category and status". 
-                      Let's apply the global filters here too, or just show all search results?
-                      "Filters should dynamically update results." - implies global filters affect this list.
-                  */}
-                  {selectedStudent.achievements
-                    .filter(a => selectedCategory === 'All' || a.category === selectedCategory)
-                    .filter(a => selectedStatus === 'All' || a.status === selectedStatus)
-                    .map(achievement => (
-                    <div key={achievement.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center justify-between hover:shadow-md transition-all">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold ${
-                              achievement.status === 'approved' ? 'bg-green-100 text-green-700' :
-                              achievement.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                              'bg-yellow-100 text-yellow-700'
-                          }`}>
-                            {achievement.status}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                             {new Date(achievement.eventDate).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <h4 className="font-bold text-gray-800 truncate">{achievement.title}</h4>
-                        <p className="text-sm text-gray-500 truncate">{achievement.category} • {achievement.organizationName}</p>
-                      </div>
-
-                      {achievement.certificateUrl && (
-                        <a 
-                          href={achievement.certificateUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors flex items-center gap-2 flex-shrink-0"
-                        >
-                          <span>📄</span> View Cert
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                  
-                  {selectedStudent.achievements
-                     .filter(a => selectedCategory === 'All' || a.category === selectedCategory)
-                     .filter(a => selectedStatus === 'All' || a.status === selectedStatus)
-                     .length === 0 && (
-                     <div className="text-center py-8 text-gray-500">
-                       No achievements match current filters.
-                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-            
-            <div className="p-4 bg-white border-t text-center text-xs text-gray-400">
-              Read-Only View • Faculty Access
-            </div>
-          </div>
-        </div>
-      )}
 
       <style jsx>{`
         @keyframes slide-up {

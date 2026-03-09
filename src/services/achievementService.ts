@@ -12,7 +12,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { db, storage } from '@/config/firebase';
+import { db, storage, auth } from '@/config/firebase';
 import { Achievement, AchievementStatus } from '@/types';
 
 export const achievementService = {
@@ -27,7 +27,9 @@ export const achievementService = {
     organizationName: string,
     eventDate: Date,
     department: string,
-    tags: string[] = []
+    tags: string[] = [],
+    fileUrls: string[] = [],
+    fileNames: string[] = []
   ) {
     try {
       if (!db) throw new Error('Firestore database not initialized');
@@ -40,8 +42,10 @@ export const achievementService = {
         category,
         organizationName,
         eventDate: Timestamp.fromDate(eventDate),
-        certificateUrl: '',
-        certificateFileName: '',
+        certificateUrl: fileUrls.length > 0 ? fileUrls[0] : '', // Backward compatibility
+        certificateFileName: fileNames.length > 0 ? fileNames[0] : '', // Backward compatibility
+        fileUrls, // New field for multiple files
+        fileNames, // New field for file names
         certificateSize: 0,
         status: AchievementStatus.PENDING,
         remarks: '',
@@ -62,26 +66,35 @@ export const achievementService = {
     }
   },
 
-  // Upload certificate file
-  async uploadCertificate(achievementId: string, studentId: string, file: File) {
+  // Upload multiple certificate files
+  async uploadCertificates(achievementId: string, studentId: string, files: File[]) {
     try {
       if (!storage) throw new Error('Cloud Storage not initialized');
       if (!db) throw new Error('Firestore database not initialized');
-      const storageRef = ref(storage, `certificates/${studentId}/${achievementId}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
       
-      // Update achievement with certificate URL
+      const fileUrls: string[] = [];
+      const fileNames: string[] = [];
+      
+      for (const file of files) {
+        const storageRef = ref(storage, `certificates/${studentId}/${achievementId}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(storageRef);
+        fileUrls.push(downloadURL);
+        fileNames.push(file.name);
+      }
+      
+      // Update achievement with files data
       await updateDoc(doc(db, 'achievements', achievementId), {
-        certificateUrl: downloadURL,
-        certificateFileName: file.name,
-        certificateSize: file.size,
+        certificateUrl: fileUrls.length > 0 ? fileUrls[0] : '',
+        certificateFileName: fileNames.length > 0 ? fileNames[0] : '',
+        fileUrls,
+        fileNames,
         updatedAt: Timestamp.now(),
       });
 
-      return downloadURL;
+      return fileUrls;
     } catch (error) {
-      console.error('Error uploading certificate:', error);
+      console.error('Error uploading certificates:', error);
       throw error;
     }
   },
@@ -191,38 +204,66 @@ export const achievementService = {
     }
   },
 
-  // Update achievement status with department verification
+  // Update achievement status - STRICTLY for Verification Team
   async updateAchievementStatus(
     achievementId: string,
     status: AchievementStatus,
     remarks: string = '',
     verifiedBy: string = '',
     verifiedByName: string = '',
-    verifierDepartment: string = ''
+    verifierRole: string = '' // New parameter to check role (or just check in backend if we had a backend, here we rely on what's passed or logic in component + rules)
+                              // note: The prompt says "Fetch current logged-in user profile", but in this service we don't have direct access to auth state hook.
+                              // However, the caller usually passes this info. 
+                              // BUT, to be "service layer" secure(ish) on client, we should check the role passed.
+                              // Actually, the best way in client-side service is to check the role of the user performing the action.
+                              // Since we can't easily get the user *inside* this static object without passing it, 
+                              // I will update the signature to accept the role, OR assume the 'verifierRole' is passed.
+                              // Wait, the prompt says "Fetch current logged-in user profile". 
+                              // I can't do `useAuth` here. 
+                              // I will assume the caller passes the role, or I fetch it from `userService` if possible, 
+                              // but `userService` also needs uid.
+                              // Let's stick to the prompt's spirit: "Check currentUser.role !== 'verification_team'".
+                              // I will update the logic to check the role which I will require as a param or rely on the caller validation + Firestore rules.
+                              // Actually, looking at the PART 3 of the prompt: 
+                              // "Modify updateAchievementStatus function to: 1. Fetch current logged-in user profile... 2. Check if role !== verification_team"
+                              // This implies I should try to get the user.
+                              // I can import `auth` from firebase/auth? No, `useAuth` is a hook.
+                              // I can use `auth.currentUser` from firebase config.
+    
   ) {
     try {
       if (!db) throw new Error('Firestore database not initialized');
       
-      // Get the achievement to check department
-      const achievementDoc = await getDoc(doc(db, 'achievements', achievementId));
-      if (!achievementDoc.exists()) {
-        throw new Error('Achievement not found');
-      }
+      // We need to verify the user's role.
+      // Since this is a client-side service, we can't trust client-side validation 100%, 
+      // but the prompt asks for it here.
+      // Firestore Rules (PART 4) is the real security.
+      // Here we add the "Business Logic" check.
       
-      const achievement = achievementDoc.data() as Achievement;
+      // Let's get the current user from auth to get UID, then fetch their profile to get Role.
+      // Imports needed:
+      const { auth } = await import('@/config/firebase'); // Dynamic import to avoid cycles/init issues if any, or just import at top. 
+      // Actually standard import is better. 
       
-      // Verify department match - only faculty from the same department can approve
-      if (verifierDepartment && achievement.studentDepartment) {
-        if (verifierDepartment !== achievement.studentDepartment) {
-          throw new Error(`Cannot approve this certificate. Faculty must be from the same department (${achievement.studentDepartment}) as the student to approve their certificates.`);
-        }
+      const currentUser = auth?.currentUser;
+      if (!currentUser) throw new Error('User not authenticated');
+
+      // Fetch user profile to get role
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      if (!userDoc.exists()) throw new Error('User profile not found');
+      
+      const userData = userDoc.data();
+      if (userData.role !== 'verification_team') {
+        throw new Error('Only verification team can approve achievements');
       }
+
+      // No department check anymore.
       
       await updateDoc(doc(db, 'achievements', achievementId), {
         status,
         remarks,
-        verifiedBy,
-        verifiedByName,
+        verifiedBy: currentUser.uid,
+        verifiedByName: userData.name || 'Verification Team',
         verificationDate: status !== AchievementStatus.PENDING ? Timestamp.now() : null,
         updatedAt: Timestamp.now(),
       });

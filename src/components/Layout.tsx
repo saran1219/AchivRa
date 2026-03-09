@@ -45,8 +45,8 @@ export const Navbar = () => {
                 </div>
               </div>
 
-              {/* Department Badge */}
-              {user.department && (
+              {/* Department Badge - specific for verification team hidden as per new policy */}
+              {user.department && user.role !== UserRole.VERIFICATION_TEAM && (
                 <ModernBadge variant="default" size="sm" className="!bg-white/10 !text-yellow-400 border border-yellow-400/20">
                   📍 {user.department}
                 </ModernBadge>
@@ -91,8 +91,8 @@ export const Sidebar = ({ children }: { children: ReactNode }) => {
         ];
       case UserRole.FACULTY:
         return [
-          { label: 'Dashboard', href: '/dashboard', icon: '📊' },
-          { label: 'View Students', href: '/faculty/queue', icon: '👥' },
+          { label: 'Dashboard', href: '/faculty/dashboard', icon: '📊' },
+          { label: 'Student Directory', href: '/faculty/students', icon: '👥' },
         ];
       case UserRole.VERIFICATION_TEAM:
         return [

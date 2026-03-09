@@ -25,11 +25,13 @@ const GoogleSignInModal = ({
   if (!isOpen) return null;
 
   const handleConfirm = () => {
-    if ((selectedRole === UserRole.STUDENT || selectedRole === UserRole.FACULTY) && !selectedDepartment) {
+    const effectiveDept = selectedRole === UserRole.VERIFICATION_TEAM ? 'N/A' : selectedDepartment;
+
+    if (selectedRole !== UserRole.VERIFICATION_TEAM && !selectedDepartment) {
       alert('Please select a department');
       return;
     }
-    onSelect(selectedRole, selectedDepartment);
+    onSelect(selectedRole, effectiveDept);
   };
 
   return (
@@ -75,7 +77,7 @@ const GoogleSignInModal = ({
           </label>
         </div>
 
-        {(selectedRole === UserRole.STUDENT || selectedRole === UserRole.FACULTY || selectedRole === UserRole.VERIFICATION_TEAM) && (
+        {(selectedRole === UserRole.STUDENT || selectedRole === UserRole.FACULTY) && (
           <div className="mb-6">
             <label className="block text-sm font-semibold text-gray-700 mb-2">🏢 Department</label>
             <select
@@ -377,15 +379,16 @@ export const RegisterForm = () => {
     setError('');
     setLoading(true);
 
-    // Validate department is selected for both students and faculty
-    if (!department) {
+    // Validate department is selected for students and faculty
+    const effectiveDepartment = role === UserRole.VERIFICATION_TEAM ? 'N/A' : department;
+    if (role !== UserRole.VERIFICATION_TEAM && !department) {
       setError('Please select a department');
       setLoading(false);
       return;
     }
 
     try {
-      await register(email, password, displayName, role, department);
+      await register(email, password, displayName, role, effectiveDepartment);
       setTimeout(() => {
         router.push('/dashboard');
       }, 1500);
@@ -470,6 +473,7 @@ export const RegisterForm = () => {
             </select>
           </div>
 
+          {role !== UserRole.VERIFICATION_TEAM && (
           <div>
             <label className="block text-sm font-bold text-[#001a4d] mb-2">🏢 Department</label>
             <select
@@ -502,6 +506,7 @@ export const RegisterForm = () => {
               <option value="MECHATRONICS ENGINEERING">Mechatronics Engineering</option>
             </select>
           </div>
+          )}
 
           <button
             type="submit"

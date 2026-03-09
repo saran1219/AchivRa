@@ -48,6 +48,7 @@ service cloud.firestore {
       // Update logical separation:
       // 1. Verification Team (Approve/Reject)
       // 2. Students (edit own pending achievements, but CANNOT change status/remarks)
+      // Faculty CANNOT update anything anymore.
       allow update: if isVerificationTeam() 
                     || (isAuthenticated() && request.auth.uid == resource.data.studentId 
                         && resource.data.status == 'pending'

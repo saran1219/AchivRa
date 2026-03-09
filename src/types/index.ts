@@ -47,6 +47,8 @@ export interface Achievement {
   updatedAt: Date;
   tags?: string[];
   isPublic?: boolean;
+  fileUrls?: string[];
+  fileNames?: string[];
 }
 
 export interface Notification {

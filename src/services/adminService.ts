@@ -97,4 +97,96 @@ export const adminService = {
       };
     }
   },
+
+  // Get department statistics for faculty dashboard
+  async getDepartmentStats(department: string) {
+    try {
+      if (!db) throw new Error('Firestore database not initialized');
+      
+      // Query users in department
+      const usersQuery = query(collection(db, 'users'), where('department', '==', department), where('role', '==', 'student'));
+      const usersSnapshot = await getDocs(usersQuery);
+      const totalStudents = usersSnapshot.size;
+
+      // Query achievements in department
+      // We fetch ALL achievements for the department to avoid compound index issues with multiple filters
+      // and to ensure we have all data for accurate client-side calculation.
+      console.log(`Fetching stats for department: "${department}"`);
+      const achievementsQuery = query(collection(db, 'achievements'), where('department', '==', department));
+      const achievementsSnapshot = await getDocs(achievementsQuery);
+      
+      console.log(`Found ${achievementsSnapshot.size} achievements for ${department}`);
+
+      const achievements = achievementsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        // Normalize fields if necessary (though we trust Firestore for now, logging helps)
+        return {
+          id: doc.id,
+          ...data,
+          eventDate: data.eventDate?.toDate() || new Date(),
+          submittedAt: data.submittedAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+          verificationDate: data.verificationDate?.toDate() || null,
+        };
+      }) as any[];
+
+      // Calculate aggregated stats
+      const totalAchievements = achievements.length;
+      const approved = achievements.filter(a => a.status === 'approved');
+      const pending = achievements.filter(a => a.status === 'pending');
+      const rejected = achievements.filter(a => a.status === 'rejected');
+
+      // 1. Category Breakdown
+      const categoryBreakdown: { [key: string]: number } = {};
+      achievements.forEach(a => {
+        const cat = a.category || 'Other';
+        categoryBreakdown[cat] = (categoryBreakdown[cat] || 0) + 1;
+      });
+
+      // 2. Recent Approved Achievements (Limit 5)
+      // Sort by verificationDate desc, then submittedAt desc
+      const recentApproved = approved
+        .sort((a, b) => {
+          const dateA = a.verificationDate || a.updatedAt;
+          const dateB = b.verificationDate || b.updatedAt;
+          return new Date(dateB).getTime() - new Date(dateA).getTime();
+        })
+        .slice(0, 5)
+        .map(a => ({
+          id: a.id,
+          studentName: a.studentName,
+          title: a.title,
+          category: a.category,
+          date: a.verificationDate || a.updatedAt,
+        }));
+
+      // 3. Approval Rate
+      const approvalRate = totalAchievements > 0 
+        ? Math.round((approved.length / totalAchievements) * 100) 
+        : 0;
+
+      return {
+        totalStudents,
+        totalAchievements,
+        approvedAchievements: approved.length,
+        pendingAchievements: pending.length,
+        rejectedAchievements: rejected.length,
+        categoryBreakdown,
+        recentApproved,
+        approvalRate,
+      };
+    } catch (error) {
+      console.error('Error fetching department stats:', error);
+      return {
+        totalStudents: 0,
+        totalAchievements: 0,
+        approvedAchievements: 0,
+        pendingAchievements: 0,
+        rejectedAchievements: 0,
+        categoryBreakdown: {},
+        recentApproved: [],
+        approvalRate: 0,
+      };
+    }
+  },
 };

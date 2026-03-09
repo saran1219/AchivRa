@@ -22,7 +22,7 @@ export const StudentSubmitCertificateComponent = () => {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [preview, setPreview] = useState<string>('');
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [submittedAchievements, setSubmittedAchievements] = useState<Achievement[]>([]);
   const [submittedLoading, setSubmittedLoading] = useState(true);
 
@@ -100,26 +100,27 @@ export const StudentSubmitCertificateComponent = () => {
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      addToast(`✓ Certificate selected: ${selectedFile.name}`, 'success');
-      
-      if (selectedFile.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          setPreview(event.target?.result as string);
-        };
-        reader.readAsDataURL(selectedFile);
-      }
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setFiles(prev => [...prev, ...newFiles]);
+      addToast(`✓ ${newFiles.length} file(s) added`, 'success');
     }
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.title || !formData.category || !formData.organizationName || !formData.eventDate || !file) {
-      addToast('Please fill all required fields and select a certificate file', 'error');
+    if (!formData.title || !formData.category || !formData.organizationName || !formData.eventDate) {
+      addToast('Please fill all required fields', 'error');
+      return;
+    }
+
+    if (files.length === 0) {
+      addToast('Please select at least one certificate file', 'error');
       return;
     }
 
@@ -131,10 +132,12 @@ export const StudentSubmitCertificateComponent = () => {
     setLoading(true);
 
     try {
-      addToast('📤 Submitting certificate...', 'info');
+      addToast('📤 Submitting achievement...', 'info');
       
       // Use user name or fallback to 'Student'
       const studentName = user.name || 'Student';
+      
+      // First, create the achievement record
       const achievementId = await achievementService.createAchievement(
         user.id,
         user.email,
@@ -148,18 +151,17 @@ export const StudentSubmitCertificateComponent = () => {
         formData.tags ? formData.tags.split(',').map(t => t.trim()) : []
       );
 
-      // Simulate upload progress
-      for (let i = 0; i <= 100; i += 10) {
-        setUploadProgress(i);
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
+      // Simulate initial progress
+      setUploadProgress(10);
 
-      // Upload certificate
-      addToast('📎 Uploading certificate file...', 'info');
-      await achievementService.uploadCertificate(achievementId, user.id, file);
+      // Upload certificates
+      addToast(`📎 Uploading ${files.length} file(s)...`, 'info');
+      await achievementService.uploadCertificates(achievementId, user.id, files);
+      
+      setUploadProgress(100);
 
       // Send notification to faculty in same department
-      addToast('✓ Certificate submitted successfully!', 'success');
+      addToast('✓ Achievement submitted successfully!', 'success');
       
       // Reload submitted achievements to show the new submission
       await loadSubmittedAchievements();
@@ -173,13 +175,12 @@ export const StudentSubmitCertificateComponent = () => {
         eventDate: '',
         tags: '',
       });
-      setFile(null);
-      setPreview('');
+      setFiles([]);
       setUploadProgress(0);
 
       // Show success message
       setTimeout(() => {
-        addToast('⏳ Pending faculty review. You will be notified once approved!', 'info');
+        addToast('⏳ Pending verification. You will be notified once approved!', 'info');
       }, 1000);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Submission failed';
@@ -300,9 +301,10 @@ export const StudentSubmitCertificateComponent = () => {
             </div>
 
             {/* File Upload */}
-            <div className="bg-blue-50/50 p-8 rounded-2xl border-2 border-dashed border-blue-200 hover:border-[#001a4d] transition-all group cursor-pointer text-center">
+            <div className="bg-blue-50/50 p-8 rounded-2xl border-2 border-dashed border-blue-200 hover:border-[#001a4d] transition-all group cursor-pointer text-center relative">
               <input
                 type="file"
+                multiple
                 accept="image/*,.pdf"
                 onChange={handleFileSelect}
                 className="hidden"
@@ -310,39 +312,42 @@ export const StudentSubmitCertificateComponent = () => {
               />
               <label htmlFor="cert-file-input" className="cursor-pointer block w-full h-full">
                 <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl shadow-md mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  {file ? '📄' : '📤'}
+                  {files.length > 0 ? '📚' : '📤'}
                 </div>
                 <p className="text-lg font-bold text-[#001a4d] mb-1 group-hover:text-blue-700 transition-colors">
-                  {file ? 'Change File' : 'Upload Certificate'}
+                  {files.length > 0 ? 'Add More Files' : 'Upload Certificates'}
                 </p>
-                <p className="text-sm text-gray-500 font-medium">PNG, JPG, PDF (max 10MB)</p>
+                <p className="text-sm text-gray-500 font-medium">PNG, JPG, PDF (Multiple files allowed)</p>
               </label>
-              
-              {file && (
-                <div className="mt-6 p-4 bg-white border border-green-200 rounded-xl shadow-sm flex items-center justify-between animate-fade-in">
-                  <div className="flex items-center gap-3">
-                    <span className="text-green-500 text-xl">✓</span>
-                    <div className="text-left">
-                      <p className="font-bold text-gray-800 text-sm truncate max-w-[200px]">{file.name}</p>
-                      <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                    </div>
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={() => { setFile(null); setPreview(''); }}
-                    className="text-gray-400 hover:text-red-500 transition-colors"
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
-              
-              {preview && (
-                <div className="mt-4">
-                  <img src={preview} alt="Preview" className="max-h-48 mx-auto rounded-lg border-4 border-white shadow-lg transform rotate-2" />
-                </div>
-              )}
             </div>
+
+            {/* Selected Files List */}
+            {files.length > 0 && (
+              <div className="space-y-2 animate-fade-in">
+                <p className="text-sm font-bold text-[#001a4d] px-1">Selected Files ({files.length})</p>
+                {files.map((f, index) => (
+                  <div key={index} className="p-3 bg-white border border-gray-200 rounded-xl shadow-sm flex items-center justify-between">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <span className="text-2xl bg-gray-100 w-10 h-10 flex items-center justify-center rounded-lg">
+                        {f.type.includes('pdf') ? '📄' : '🖼️'}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-bold text-gray-800 text-sm truncate">{f.name}</p>
+                        <p className="text-xs text-gray-500">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
+                      </div>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => removeFile(index)}
+                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                      title="Remove file"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Upload Progress */}
             {uploadProgress > 0 && uploadProgress < 100 && (
@@ -401,53 +406,89 @@ export const StudentSubmitCertificateComponent = () => {
           ) : (
             <div className="space-y-4">
               {submittedAchievements.map((achievement) => (
-                <div
-                  key={achievement.id}
-                  className="bg-white/95 backdrop-blur-sm rounded-xl border border-white/20 p-5 hover:bg-white hover:shadow-xl hover:scale-[1.01] transition-all duration-300 cursor-default group"
-                >
-                  <div className="flex items-start justify-between gap-4 flex-wrap">
-                    {/* Left Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-2xl">
-                           {achievement.status === 'approved' && '✅'}
-                           {achievement.status === 'rejected' && '❌'}
-                           {achievement.status === 'pending' && '⏳'}
-                        </span>
-                        <h3 className="font-bold text-[#001a4d] text-base truncate group-hover:text-blue-700 transition-colors">{achievement.title}</h3>
+                  <div
+                    key={achievement.id}
+                    className={`rounded-xl p-5 hover:shadow-xl hover:scale-[1.01] transition-all duration-300 cursor-default group border-2 ${
+                      achievement.status === 'approved'
+                        ? 'bg-green-50 border-green-500' // Verified Style
+                        : achievement.status === 'rejected'
+                        ? 'bg-red-50 border-red-200'
+                        : 'bg-white/95 backdrop-blur-sm border-white/20 hover:bg-white'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      {/* Left Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-2xl">
+                             {achievement.status === 'approved' && '✅'}
+                             {achievement.status === 'rejected' && '❌'}
+                             {achievement.status === 'pending' && '⏳'}
+                          </span>
+                          <h3 className="font-bold text-[#001a4d] text-base truncate group-hover:text-blue-700 transition-colors">{achievement.title}</h3>
+                          {achievement.status === 'approved' && (
+                            <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-bold border border-green-200">
+                              ✔ Verified
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-2 flex-wrap text-sm font-medium pl-9">
+                          <span className="inline-block bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100 uppercase tracking-wide">{achievement.category}</span>
+                          <span className="text-gray-500">🏢 {achievement.organizationName}</span>
+                          <span className="text-gray-500">📅 {new Date(achievement.eventDate).toLocaleDateString()}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3 mt-2 flex-wrap text-sm font-medium pl-9">
-                        <span className="inline-block bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100 uppercase tracking-wide">{achievement.category}</span>
-                        <span className="text-gray-500">🏢 {achievement.organizationName}</span>
-                        <span className="text-gray-500">📅 {new Date(achievement.eventDate).toLocaleDateString()}</span>
-                      </div>
-                    </div>
 
-                    {/* Status Badge */}
-                    <div className="flex-shrink-0 self-center">
-                      {achievement.status === 'approved' && (
-                        <div className="px-4 py-1.5 bg-green-100 text-green-800 rounded-lg text-xs font-bold border border-green-200">
-                          Verified
-                        </div>
-                      )}
-                      {achievement.status === 'pending' && (
-                        <div className="px-4 py-1.5 bg-yellow-100 text-yellow-800 rounded-lg text-xs font-bold border border-yellow-200">
-                          In Review
-                        </div>
-                      )}
-                      {achievement.status === 'rejected' && (
-                        <div className="px-4 py-1.5 bg-red-100 text-red-800 rounded-lg text-xs font-bold border border-red-200">
-                          Rejected
-                        </div>
-                      )}
+                      {/* Status Badge */}
+                      <div className="flex-shrink-0 self-center">
+                        {achievement.status === 'approved' && (
+                          <div className="px-4 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-bold border border-green-200 shadow-sm">
+                            Verified
+                          </div>
+                        )}
+                        {achievement.status === 'pending' && (
+                          <div className="px-4 py-1.5 bg-yellow-100 text-yellow-800 rounded-lg text-xs font-bold border border-yellow-200">
+                            In Review
+                          </div>
+                        )}
+                        {achievement.status === 'rejected' && (
+                          <div className="px-4 py-1.5 bg-red-100 text-red-800 rounded-lg text-xs font-bold border border-red-200">
+                            Rejected
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
                   {/* Remarks */}
                   {achievement.remarks && (
                     <div className="mt-4 pt-3 border-t border-gray-100 pl-9">
                       <p className="text-xs font-bold text-[#001a4d] uppercase tracking-wide mb-1 opacity-70">Faculty Feedback</p>
                       <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-100 italic">"{achievement.remarks}"</p>
+                    </div>
+                  )}
+
+                  {/* Files List */}
+                  {((achievement.fileUrls?.length ?? 0) > 0) && (
+                    <div className="mt-4 pt-3 border-t border-gray-100 pl-9">
+                      <p className="text-xs font-bold text-[#001a4d] uppercase tracking-wider mb-2 opacity-70">Submitted Files</p>
+                      <div className="flex flex-wrap gap-2">
+                        {achievement.fileUrls!.map((url, i) => {
+                           const fileName = achievement.fileNames?.[i] || `File ${i+1}`;
+                           const isPdf = url.toLowerCase().includes('.pdf') || fileName.toLowerCase().includes('.pdf');
+                           return (
+                             <a 
+                               key={i}
+                               href={url}
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm hover:bg-blue-50 hover:border-blue-200 transition-colors group"
+                             >
+                                <span className="text-lg">{isPdf ? '📄' : '🖼️'}</span>
+                                <span className="truncate max-w-[150px] font-medium text-gray-700 group-hover:text-blue-700">{fileName}</span>
+                             </a>
+                           );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>

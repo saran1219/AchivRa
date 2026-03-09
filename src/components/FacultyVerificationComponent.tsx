@@ -369,14 +369,15 @@ export const FacultyVerificationComponent = () => {
                   )}
                 </div>
 
-                {/* Verification Form */}
+                {/* Verification Form - REMOVED for Faculty as per new policy */}
                 {selectedAchievement.status === 'pending' && (
                   <div className="border-t border-gray-100 p-6 bg-yellow-50 flex-shrink-0">
                     <h3 className="text-sm font-bold text-yellow-800 mb-2 uppercase tracking-wider flex items-center gap-2">
-                       ⏳ Status: Pending Approval
+                       ⏳ Status: Pending Verification
                     </h3>
                     <p className="text-sm text-yellow-700">
-                      This achievement is awaiting verification by the Verification Team. You can view the details but cannot take action.
+                      This achievement is awaiting verification by the <strong>Verification Team</strong>. 
+                      Faculty view is now read-only.
                     </p>
                   </div>
                 )}
@@ -387,7 +388,7 @@ export const FacultyVerificationComponent = () => {
                    👈
                 </div>
                 <h3 className="text-2xl font-bold text-[#001a4d] mb-2">No Achievement Selected</h3>
-                <p className="text-gray-500 max-w-xs">Select an item from the list on the left to view details and take action.</p>
+                <p className="text-gray-500 max-w-xs">Select an item from the list on the left to view details.</p>
               </div>
             )}
           </div>
@@ -421,7 +422,7 @@ export const FacultyVerificationComponent = () => {
         }
         .animate-slide-up { animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
       `}</style>
-
+      
       {/* All Queue Items Modal */}
       {showAllModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
