@@ -10,6 +10,7 @@ export interface UserProfile {
   department?: string;
   joinedDate?: any; // Timestamp
   photoURL?: string;
+  skills?: string[];
 }
 
 export const userService = {
@@ -55,6 +56,41 @@ export const userService = {
     } catch (error) {
       console.error('Error fetching students by department:', error);
       return [];
+    }
+  },
+
+  // Get student by ID
+  async getStudentById(uid: string): Promise<UserProfile | null> {
+    try {
+      if (!db) throw new Error('Firestore database not initialized');
+      
+      const { doc: firestoreDoc, getDoc } = await import('firebase/firestore');
+      const docRef = firestoreDoc(db, 'users', uid);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists() && docSnap.data().role === UserRole.STUDENT) {
+        return {
+          uid: docSnap.id,
+          ...docSnap.data()
+        } as UserProfile;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching student by ID:', error);
+      return null;
+    }
+  },
+
+  // Update user skills
+  async updateUserSkills(uid: string, skills: string[]): Promise<void> {
+    try {
+      if (!db) throw new Error('Firestore database not initialized');
+      const { doc: firestoreDoc, updateDoc } = await import('firebase/firestore');
+      const docRef = firestoreDoc(db, 'users', uid);
+      await updateDoc(docRef, { skills });
+    } catch (error) {
+      console.error('Error updating user skills:', error);
+      throw error;
     }
   }
 };

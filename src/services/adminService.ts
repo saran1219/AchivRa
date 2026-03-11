@@ -103,25 +103,30 @@ export const adminService = {
     try {
       if (!db) throw new Error('Firestore database not initialized');
       
-      // Query users in department
-      const usersQuery = query(collection(db, 'users'), where('department', '==', department), where('role', '==', 'student'));
+      // Fetch all users and filter locally to bypass compound index requirement
+      const usersQuery = query(collection(db, 'users'));
       const usersSnapshot = await getDocs(usersQuery);
-      const totalStudents = usersSnapshot.size;
+      const totalStudents = usersSnapshot.docs.filter(doc => {
+        const data = doc.data();
+        return data.role === 'student' && data.department === department;
+      }).length;
 
-      // Query achievements in department
-      // We fetch ALL achievements for the department to avoid compound index issues with multiple filters
-      // and to ensure we have all data for accurate client-side calculation.
+      // Fetch all achievements and filter locally to bypass index requirement
       console.log(`Fetching stats for department: "${department}"`);
-      const achievementsQuery = query(collection(db, 'achievements'), where('department', '==', department));
+      const achievementsQuery = query(collection(db, 'achievements'));
       const achievementsSnapshot = await getDocs(achievementsQuery);
       
-      console.log(`Found ${achievementsSnapshot.size} achievements for ${department}`);
+      const achievementsRaw = achievementsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      const departmentAchievements = achievementsRaw.filter((a: any) => a.department === department);
+      console.log(`Found ${departmentAchievements.length} achievements for ${department}`);
 
-      const achievements = achievementsSnapshot.docs.map(doc => {
-        const data = doc.data();
+      const achievements = departmentAchievements.map(data => {
         // Normalize fields if necessary (though we trust Firestore for now, logging helps)
         return {
-          id: doc.id,
           ...data,
           eventDate: data.eventDate?.toDate() || new Date(),
           submittedAt: data.submittedAt?.toDate() || new Date(),
@@ -136,12 +141,33 @@ export const adminService = {
       const pending = achievements.filter(a => a.status === 'pending');
       const rejected = achievements.filter(a => a.status === 'rejected');
 
-      // 1. Category Breakdown
+      // 1. Category Breakdown & 2. Top Students Mapping
       const categoryBreakdown: { [key: string]: number } = {};
+      const studentAchievementCounts: { [uid: string]: { name: string; department: string; approvedCount: number; totalCount: number } } = {};
+      
       achievements.forEach(a => {
         const cat = a.category || 'Other';
         categoryBreakdown[cat] = (categoryBreakdown[cat] || 0) + 1;
+        
+        // Track for leaderboard
+        if (!studentAchievementCounts[a.studentId]) {
+          studentAchievementCounts[a.studentId] = {
+            name: a.studentName || 'Unknown Student',
+            department: a.department || department,
+            approvedCount: 0,
+            totalCount: 0
+          };
+        }
+        studentAchievementCounts[a.studentId].totalCount++;
+        if (a.status === 'approved') {
+          studentAchievementCounts[a.studentId].approvedCount++;
+        }
       });
+
+      // Calculate Top 5 Students Leaderboard (by approved achievements)
+      const topStudents = Object.values(studentAchievementCounts)
+        .sort((a, b) => b.approvedCount - a.approvedCount)
+        .slice(0, 5);
 
       // 2. Recent Approved Achievements (Limit 5)
       // Sort by verificationDate desc, then submittedAt desc
@@ -174,6 +200,7 @@ export const adminService = {
         categoryBreakdown,
         recentApproved,
         approvalRate,
+        topStudents,
       };
     } catch (error) {
       console.error('Error fetching department stats:', error);
@@ -186,6 +213,7 @@ export const adminService = {
         categoryBreakdown: {},
         recentApproved: [],
         approvalRate: 0,
+        topStudents: [],
       };
     }
   },

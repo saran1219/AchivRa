@@ -16,8 +16,8 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="bg-[#001a4d] border-b border-white/10 shadow-lg sticky top-0 z-50 backdrop-blur-md bg-opacity-95">
-      <div className="max-w-full px-6 py-3 flex items-center justify-between gap-4">
+    <nav className="bg-[#001a4d] border-b border-white/10 shadow-lg fixed right-0 w-[calc(100%-5rem)] lg:w-[calc(100%-16rem)] top-0 z-50 backdrop-blur-md bg-opacity-95 h-16 transition-all duration-300 pointer-events-none">
+      <div className="max-w-full h-full px-6 flex items-center justify-between gap-4 pointer-events-auto">
         {/* Logo */}
         <Link
           href="/"
@@ -116,12 +116,12 @@ export const Sidebar = ({ children }: { children: ReactNode }) => {
   const menuItems = getMenuItems();
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="bg-gray-50 min-h-screen">
       {/* Sidebar */}
       <aside
-        className={`${
+        className={`fixed left-0 top-0 bottom-0 ${
           isOpen ? 'w-64' : 'w-20'
-        } bg-[#001a4d] border-r border-white/5 shadow-xl transition-all duration-300 flex flex-col relative z-20`}
+        } bg-[#001a4d] border-r border-white/5 shadow-xl transition-all duration-300 flex flex-col z-[110]`}
       >
         {/* Toggle Button */}
         <div className="p-4 border-b border-white/10 flex items-center justify-between flex-shrink-0">
@@ -161,10 +161,10 @@ export const Sidebar = ({ children }: { children: ReactNode }) => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto bg-gray-50 relative">
+      <main className={`transition-all duration-300 pt-16 min-h-screen relative ${isOpen ? 'ml-64' : 'ml-20'}`}>
         {/* Background gradient for main content area */}
-        <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-[#001a4d] to-transparent pointer-events-none" />
-        <div className="relative z-10 animate-fade-in">
+        <div className="absolute inset-x-0 top-16 h-48 bg-gradient-to-b from-[#001a4d] to-transparent pointer-events-none z-0" />
+        <div className="relative z-10 animate-fade-in p-0">
           {children}
         </div>
       </main>

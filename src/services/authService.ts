@@ -230,7 +230,9 @@ export const authService = {
       // Give Firestore a moment to sync
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      return user;
+      // Append role and department to the returned Firebase user object
+      // so the caller has immediate access to the full profile
+      return Object.assign(user, { role: userProfile.role, department: userProfile.department });
     } catch (error: any) {
       console.error('🔷 Google sign-in error:', error);
       const userMessage = getFirebaseErrorMessage(error);

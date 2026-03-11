@@ -3,6 +3,13 @@ import { getAuth, Auth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, Firestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, FirebaseStorage, connectStorageEmulator } from 'firebase/storage';
 
+// Log environment variables directly to see what Next.js is passing to the client
+console.log('--- Firebase Initialization: Checking Environment Variables ---');
+console.log('NEXT_PUBLIC_FIREBASE_API_KEY:', process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? '(Set)' : 'undefined');
+console.log('NEXT_PUBLIC_FIREBASE_PROJECT_ID:', process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'undefined');
+console.log('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:', process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'undefined');
+console.log('-----------------------------------------------------------');
+
 // Use environment variables with fallbacks for runtime access
 const firebaseConfig = {
   apiKey: typeof window !== 'undefined' ? 

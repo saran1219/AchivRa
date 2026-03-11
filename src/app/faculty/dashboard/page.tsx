@@ -5,6 +5,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { adminService } from '@/services/adminService';
 import { Navbar, Sidebar } from '@/components/Layout';
 import { useRouter } from 'next/navigation';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export default function FacultyDashboardPage() {
   const { user, loading, logout } = useAuth();
@@ -145,34 +148,80 @@ export default function FacultyDashboardPage() {
 
             {/* Department Insights Section */}
             {!loadingStats && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 
-                {/* Category Breakdown */}
+                {/* Category Breakdown (Pie Chart) */}
                 <div className="bg-white rounded-2xl shadow-xl p-6">
                   <h3 className="text-lg font-bold text-[#001a4d] mb-4 flex items-center gap-2">
                     <span>📑</span> Category Breakdown
                   </h3>
-                  <div className="space-y-4">
-                    {Object.entries((stats as any).categoryBreakdown || {}).length > 0 ? (
-                      Object.entries((stats as any).categoryBreakdown).map(([category, count]: [string, any], index) => (
-                        <div key={index} className="flex items-center gap-4">
-                          <div className="w-full flex-1">
-                            <div className="flex justify-between mb-1">
-                              <span className="text-sm font-medium text-gray-700">{category}</span>
-                              <span className="text-sm font-bold text-[#001a4d]">{count}</span>
+                  {Object.entries((stats as any).categoryBreakdown || {}).length > 0 ? (
+                    <div className="flex flex-col h-full">
+                      <div className="w-full h-[250px] relative">
+                        <ResponsiveContainer width="100%" height={250}>
+                          <PieChart>
+                            <Pie
+                              data={Object.entries((stats as any).categoryBreakdown).map(([name, value]) => ({ name, value }))}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={40}
+                              outerRadius={60}
+                              paddingAngle={5}
+                              dataKey="value"
+                            >
+                              {Object.entries((stats as any).categoryBreakdown).map((_, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <RechartsTooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="mt-4 flex flex-col gap-2 flex-grow overflow-y-auto pr-2">
+                        {Object.entries((stats as any).categoryBreakdown).map(([category, count]: [string, any], index) => (
+                          <div key={index} className="flex items-center justify-between text-sm py-1 border-b border-gray-50 last:border-0">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></span>
+                              <span className="text-gray-700 font-medium truncate" title={category}>{category}</span>
                             </div>
-                            <div className="w-full bg-gray-100 rounded-full h-2.5">
-                              <div 
-                                className="bg-blue-600 h-2.5 rounded-full" 
-                                style={{ width: `${(count / stats.totalAchievements) * 100}%` }}
-                              ></div>
-                            </div>
+                            <span className="font-bold text-[#001a4d] bg-blue-50 px-2 py-0.5 rounded text-xs">{count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-400 italic">
+                      {stats.totalAchievements === 0 ? "No achievements submitted yet" : "No data available"}
+                    </div>
+                  )}
+                </div>
+
+                {/* Top Achievers Leaderboard */}
+                <div className="bg-gradient-to-br from-[#001a4d] to-[#0033a0] rounded-2xl shadow-xl p-6 text-white relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
+                  <h3 className="text-lg font-bold mb-6 flex items-center gap-2 relative z-10 text-yellow-400">
+                    <span>🏆</span> Top Achievers
+                  </h3>
+                  <div className="space-y-4 relative z-10">
+                    {((stats as any).topStudents || []).length > 0 ? (
+                      (stats as any).topStudents.map((student: any, index: number) => (
+                        <div key={index} className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/10 hover:bg-white/20 transition-colors">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0 border-2 ${index === 0 ? 'bg-yellow-400 text-[#001a4d] border-yellow-200' : index === 1 ? 'bg-gray-300 text-gray-800 border-gray-100' : 'bg-orange-400 text-orange-900 border-orange-200'}`}>
+                            #{index + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-white text-sm truncate" title={student.name}>{student.name}</p>
+                            <p className="text-[10px] text-blue-200 uppercase tracking-widest">{student.department}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="font-bold text-yellow-300 text-lg leading-none">{student.approvedCount}</p>
+                            <p className="text-[9px] text-blue-200 uppercase">Approved</p>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="text-center py-8 text-gray-400 italic">
-                        {stats.totalAchievements === 0 ? "No achievements submitted yet" : "No data available"}
+                      <div className="text-center py-8 text-blue-200 italic text-sm">
+                        No approved achievements yet to build leaderboard.
                       </div>
                     )}
                   </div>

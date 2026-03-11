@@ -76,11 +76,16 @@ export const achievementService = {
       const fileNames: string[] = [];
       
       for (const file of files) {
-        const storageRef = ref(storage, `certificates/${studentId}/${achievementId}_${file.name}`);
+        const filePath = `certificates/${studentId}/${achievementId}_${file.name}`;
+        const storageRef = ref(storage, filePath);
         await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(storageRef);
-        fileUrls.push(downloadURL);
-        fileNames.push(file.name);
+        try {
+          const downloadURL = await getDownloadURL(storageRef);
+          fileUrls.push(downloadURL);
+          fileNames.push(file.name);
+        } catch(error) {
+          console.warn("File not found in storage:", filePath);
+        }
       }
       
       // Update achievement with files data
@@ -103,6 +108,7 @@ export const achievementService = {
   async getStudentAchievements(studentId: string): Promise<Achievement[]> {
     try {
       if (!db) throw new Error('Firestore database not initialized');
+      
       const q = query(
         collection(db, 'achievements'),
         where('studentId', '==', studentId)
@@ -188,9 +194,10 @@ export const achievementService = {
   async getAllAchievements(): Promise<Achievement[]> {
     try {
       if (!db) throw new Error('Firestore database not initialized');
-      const q = query(collection(db, 'achievements'), orderBy('submittedAt', 'desc'));
+      
+      const q = query(collection(db, 'achievements'));
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map((doc) => ({
+      const achievements = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
         eventDate: doc.data().eventDate?.toDate() || new Date(),
@@ -198,6 +205,10 @@ export const achievementService = {
         updatedAt: doc.data().updatedAt?.toDate() || new Date(),
         verificationDate: doc.data().verificationDate?.toDate() || null,
       })) as Achievement[];
+      
+      return achievements.sort((a, b) => 
+        new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+      );
     } catch (error) {
       console.error('Error fetching achievements:', error);
       return [];
