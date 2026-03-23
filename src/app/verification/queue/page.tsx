@@ -18,8 +18,12 @@ export default function VerificationQueuePage() {
     }
     
     // Protect route - Only Verification Team
-    if (!loading && user && user.role !== UserRole.VERIFICATION_TEAM && user.role !== UserRole.ADMIN) {
-      router.push('/unauthorized');
+    if (!loading && user) {
+      if (user.role !== "verification_team") {
+        router.push('/');
+      } else {
+        console.log("Navigating to:", "/verification/queue");
+      }
     }
   }, [user, loading, router]);
 
@@ -32,7 +36,7 @@ export default function VerificationQueuePage() {
   }
 
   // Double check render protection
-  if (user.role !== UserRole.VERIFICATION_TEAM && user.role !== UserRole.ADMIN) {
+  if (user.role !== "verification_team") {
       return null;
   }
 

@@ -34,9 +34,13 @@ export default function VerificationDashboardPage() {
     }
     
     // Protect route - Only Verification Team
-    if (!authLoading && user && user.role !== UserRole.VERIFICATION_TEAM && user.role !== UserRole.ADMIN) {
-      router.push('/unauthorized');
-      return;
+    if (!authLoading && user) {
+      if (user.role !== "verification_team") {
+        router.push('/');
+        return;
+      } else {
+        console.log("Navigating to:", "/verification/dashboard");
+      }
     }
 
     const loadData = async () => {
@@ -64,7 +68,7 @@ export default function VerificationDashboardPage() {
   }
 
   // Double check render protection
-  if (user.role !== UserRole.VERIFICATION_TEAM && user.role !== UserRole.ADMIN) {
+  if (user.role !== "verification_team") {
       return null;
   }
 
@@ -104,6 +108,7 @@ export default function VerificationDashboardPage() {
     <>
       <Navbar />
       <Sidebar>
+
         <PageLayout title="Verification Overview" subtitle="High-level metrics for student certificate verification">
           <motion.div 
             initial="hidden" 
