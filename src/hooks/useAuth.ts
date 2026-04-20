@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { User as FirebaseUser, onAuthStateChanged, Auth } from 'firebase/auth';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { User as FirebaseUser, onAuthStateChanged, Auth, getRedirectResult } from 'firebase/auth';
 import { auth } from '@/config/firebase';
 import { authService } from '@/services/authService';
 import { User as AppUser, UserRole } from '@/types';
@@ -11,39 +11,65 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const hasCheckedRedirect = useRef(false);
+
   useEffect(() => {
     const authInstance = auth as Auth | null;
-    if (!authInstance) {
-      setError('Firebase authentication not initialized. Check your environment variables.');
-      setLoading(false);
-      console.error('Firebase auth not available:', auth);
-      return;
-    }
+    if (!authInstance) return;
 
-    try {
-      const unsubscribe = onAuthStateChanged(authInstance, async (fbUser) => {
-        setFirebaseUser(fbUser);
-        if (fbUser) {
-          try {
-            const userProfile = await authService.getUserProfile(fbUser.uid);
-            setUser(userProfile);
-          } catch (err) {
-            console.error('Error fetching user profile:', err);
-            setError(err instanceof Error ? err.message : 'Failed to load user profile');
+    const handleRedirect = async () => {
+      // Run once per app load to check if user redirected back from Google
+      if (hasCheckedRedirect.current) return;
+      hasCheckedRedirect.current = true;
+
+      try {
+        console.log('🔷 Checking Google redirect result...');
+        const result = await getRedirectResult(authInstance);
+        
+        if (result?.user) {
+          console.log('🔷 Redirect sign-in successful for:', result.user.email);
+          
+          // Check if this was a registration attempt
+          const pendingReg = sessionStorage.getItem('pending_google_reg');
+          if (pendingReg) {
+            console.log('🔷 Found pending Google registration data');
+            const { role, dept } = JSON.parse(pendingReg);
+            sessionStorage.removeItem('pending_google_reg');
+            
+            // Re-run registration logic
+            await authService.handleGoogleUserRegistration(result.user, role, dept);
+          } else {
+            // Normal login flow
+            await authService.handleGoogleUserLogin(result.user);
           }
-        } else {
-          setUser(null);
+          
+          // The onAuthStateChanged listener will handle setting the user state
         }
-        setLoading(false);
-      });
+      } catch (err: any) {
+        console.error('🔷 Redirect handling error:', err);
+        setError(getFirebaseErrorMessage(err));
+      }
+    };
 
-      return unsubscribe;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Auth initialization failed';
-      setError(errorMessage);
+    handleRedirect();
+
+    const unsubscribe = onAuthStateChanged(authInstance, async (fbUser) => {
+      setFirebaseUser(fbUser);
+      if (fbUser) {
+        try {
+          const userProfile = await authService.getUserProfile(fbUser.uid);
+          setUser(userProfile);
+        } catch (err) {
+          console.error('Error fetching user profile:', err);
+          setError(err instanceof Error ? err.message : 'Failed to load user profile');
+        }
+      } else {
+        setUser(null);
+      }
       setLoading(false);
-      console.error('Auth error:', err);
-    }
+    });
+
+    return unsubscribe;
   }, []);
 
   const register = useCallback(
@@ -86,7 +112,7 @@ export const useAuth = () => {
   const signInWithGoogle = useCallback(async (role?: UserRole, dept?: string) => {
     try {
       setError(null);
-      await authService.signInWithGoogle(role, dept);
+      await authService.signInWithGoogle();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Google sign-in failed';
       setError(errorMessage);
