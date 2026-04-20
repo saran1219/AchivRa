@@ -60,9 +60,17 @@ service cloud.firestore {
     
     // Notifications collection
     match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
-      allow create: if isAuthenticated(); // Allow system/functions/other users to create notifications
-      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId; // Mark as read
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.recipientId
+        || (resource.data.recipientId == 'all_verification_team' && isVerificationTeam())
+        || (resource.data.recipientId == 'admin' && isAdmin())
+      );
+      // Allow authenticated clients to create notifications (business logic is enforced by the app + roles).
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.recipientId
+        || (resource.data.recipientId == 'all_verification_team' && isVerificationTeam())
+      ); // Mark as read (status update)
     }
 
     // Default deny all other collections

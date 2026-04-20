@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Achievement } from '@/types';
+import { Achievement, SkillGroup } from '@/types';
 import { achievementService } from '@/services/achievementService';
 import { notificationService } from '@/services/notificationService';
 import { useAuth } from '@/hooks/useAuth';
@@ -37,6 +37,7 @@ export const AchievementForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const [success, setSuccess] = useState(false);
   const [toasts, setToasts] = useState<Array<{ message: string; type: ToastType }>>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [skillGroup, setSkillGroup] = useState<SkillGroup>(SkillGroup.TECHNICAL);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const { user } = useAuth();
 
@@ -107,7 +108,10 @@ export const AchievementForm = ({ onSuccess }: { onSuccess: () => void }) => {
         organizationName,
         new Date(eventDate),
         user.department || '',
-        []
+        [],
+        [],
+        [],
+        skillGroup
       );
 
       if (certificate) {
@@ -263,6 +267,20 @@ export const AchievementForm = ({ onSuccess }: { onSuccess: () => void }) => {
           </div>
 
           <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 block">Skill group</label>
+            <select
+              aria-label="Skill group"
+              value={skillGroup}
+              onChange={(e) => setSkillGroup(e.target.value as SkillGroup)}
+              className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition border-gray-300 focus:border-orange-500"
+            >
+              <option value={SkillGroup.TECHNICAL}>Technical</option>
+              <option value={SkillGroup.PROFESSIONAL}>Professional</option>
+              <option value={SkillGroup.SOFT_SKILLS}>Soft Skills</option>
+            </select>
+          </div>
+
+          <div>
             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 block">Event Date</label>
             <input
               type="date"
@@ -401,10 +419,19 @@ export const AchievementList = ({ achievements, showCertificate = false }: { ach
                 </div>
 
                 {/* Optional Feedback Row */}
+                {achievement.skillGroup && (
+                  <span className="inline-flex mt-2 text-[10px] font-bold uppercase tracking-wide text-[#001a4d] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded">
+                    {achievement.skillGroup}
+                  </span>
+                )}
+
                 {achievement.remarks && (
                   <div className="mt-3 flex items-start gap-2 bg-orange-50/50 rounded-lg p-2.5 border border-orange-100/50">
                     <MessageSquare size={14} className="text-orange-400 shrink-0 mt-0.5" />
-                    <p className="text-xs text-orange-900 italic line-clamp-2">"{achievement.remarks}"</p>
+                    <div>
+                      <p className="text-[10px] font-bold text-orange-800 uppercase tracking-wide mb-0.5">Faculty remarks</p>
+                      <p className="text-xs text-orange-900 italic line-clamp-2">"{achievement.remarks}"</p>
+                    </div>
                   </div>
                 )}
                 
@@ -513,7 +540,7 @@ export const AchievementList = ({ achievements, showCertificate = false }: { ach
 
                   {selectedAchievement.remarks && (
                     <div className="bg-orange-50 border-l-4 border-orange-500 p-3 rounded text-sm text-gray-700">
-                      <strong>💬 Remarks:</strong> {selectedAchievement.remarks}
+                      <strong>Faculty remarks:</strong> {selectedAchievement.remarks}
                     </div>
                   )}
                   

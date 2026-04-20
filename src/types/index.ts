@@ -13,6 +13,14 @@ export enum AchievementStatus {
   REJECTED = 'rejected',
 }
 
+export enum SkillGroup {
+  TECHNICAL = 'Technical',
+  PROFESSIONAL = 'Professional',
+  SOFT_SKILLS = 'Soft Skills',
+}
+
+export type AchievementPriorityLevel = 'normal' | 'high';
+
 export interface User {
   id: string;
   email: string;
@@ -31,12 +39,16 @@ export interface Achievement {
   title: string;
   description: string;
   category: string;
+  /** High-level skill bucket for reporting (Technical, Professional, Soft Skills). */
+  skillGroup?: SkillGroup | string;
   organizationName: string;
   eventDate: Date;
   certificateUrl?: string;
   certificateFileName?: string;
   certificateSize?: number;
   status: AchievementStatus;
+  /** Queue hint: pending items older than 3 days are treated as high priority in UI. */
+  priority?: AchievementPriorityLevel;
   remarks?: string;
   verifiedBy?: string;
   verifiedByName?: string;
@@ -53,11 +65,26 @@ export interface Achievement {
 
 export interface Notification {
   id: string;
-  userId: string;
-  type: string;
+  // Requested schema
+  recipientId: string;
   message: string;
-  isRead: boolean;
+  type?: 'submission' | 'result' | string;
+  status?: 'unread' | 'read' | string;
   createdAt: Date;
+
+  // Optional richer fields (not required by spec, but used by some UI)
+  title?: string;
+  actionUrl?: string;
+  relatedAchievementId?: string;
+  relatedAchievementTitle?: string;
+  priority?: string;
+
+  // Legacy fields (kept so older documents/UI don't crash)
+  userId?: string;
+  role?: 'student' | 'verification_team' | string;
+  read?: boolean;
+  isRead?: boolean;
+  readAt?: Date | null;
 }
 
 export interface AchievementCategory {

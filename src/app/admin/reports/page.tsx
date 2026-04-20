@@ -23,11 +23,16 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const statsData = await adminService.getDashboardStats();
-      const achievementsData = await achievementService.getAllAchievements();
-      setStats(statsData);
-      setAchievements(achievementsData);
-      setAchievementsLoading(false);
+      try {
+        const statsData = await adminService.getDashboardStats();
+        const achievementsData = await achievementService.getAllAchievements();
+        setStats(statsData);
+        setAchievements(achievementsData);
+      } catch (error) {
+        console.error('Failed to fetch admin stats:', error);
+      } finally {
+        setAchievementsLoading(false);
+      }
     };
     fetchData();
   }, []);

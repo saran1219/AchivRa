@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { achievementService } from '@/services/achievementService';
 import { userService, UserProfile } from '@/services/userService';
-import { Achievement, AchievementStatus } from '@/types';
+import { Achievement } from '@/types';
 import { AchievementList } from '@/components/AchievementComponents';
 import { Navbar, Sidebar, PageLayout } from '@/components/Layout';
 import { StatCard } from '@/components/ModernCard';
@@ -27,8 +27,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 export default function StudentAchievementsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [allAchievements, setAllAchievements] = useState<Achievement[]>([]); // Includes pending/rejected for stats
+  const [allAchievements, setAllAchievements] = useState<Achievement[]>([]);
   const [studentProfile, setStudentProfile] = useState<UserProfile | null>(null);
   const [achievementsLoading, setAchievementsLoading] = useState(true);
 
@@ -54,10 +53,6 @@ export default function StudentAchievementsPage() {
           // Fetch achievements
           const data = await achievementService.getStudentAchievements(user.id);
           setAllAchievements(data);
-          
-          // Only show APPROVED achievements in the timeline by default
-          const approvedOnly = data.filter(a => a.status === AchievementStatus.APPROVED);
-          setAchievements(approvedOnly);
         } catch (error) {
           console.error("Failed to load student dashboard data", error);
         } finally {
@@ -67,6 +62,14 @@ export default function StudentAchievementsPage() {
       fetchData();
     }
   }, [user]);
+
+  const timelineAchievements = useMemo(() => {
+    return [...allAchievements].sort((a, b) => {
+      const ta = new Date(a.submittedAt || a.eventDate || 0).getTime();
+      const tb = new Date(b.submittedAt || b.eventDate || 0).getTime();
+      return tb - ta;
+    });
+  }, [allAchievements]);
 
   // Analytics Calculations
   const total = allAchievements.length;
@@ -225,11 +228,14 @@ export default function StudentAchievementsPage() {
 
                   {/* Timeline (Achievement List) */}
                   <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
-                    <h3 className="text-xl font-bold text-[#001a4d] mb-6 flex items-center gap-2">
+                    <h3 className="text-xl font-bold text-[#001a4d] mb-2 flex items-center gap-2">
                       <ScrollText size={24} className="text-[#001a4d]" /> 
-                      Recent Achievements
+                      Activity timeline
                     </h3>
-                    <AchievementList achievements={achievements} showCertificate={true} />
+                    <p className="text-sm text-gray-500 mb-6">
+                      All submissions in review order. Faculty remarks appear here when a submission is approved or rejected.
+                    </p>
+                    <AchievementList achievements={timelineAchievements} showCertificate={true} />
                   </div>
 
                 </div>

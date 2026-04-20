@@ -59,6 +59,8 @@ export const NotificationsComponent = () => {
       case 'rejection': return '⚠️';
       case 'pending': return '⏳';
       case 'update': return '📢';
+      case 'submission': return '📬';
+      case 'result': return '✅';
       default: return '📬';
     }
   };
@@ -69,6 +71,8 @@ export const NotificationsComponent = () => {
       case 'rejection': return 'bg-red-50 border-red-200 hover:bg-red-100';
       case 'pending': return 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100';
       case 'update': return 'bg-blue-50 border-blue-200 hover:bg-blue-100';
+      case 'submission': return 'bg-blue-50 border-blue-200 hover:bg-blue-100';
+      case 'result': return 'bg-green-50 border-green-200 hover:bg-green-100';
       default: return 'bg-gray-50 border-gray-200 hover:bg-gray-100';
     }
   };
@@ -117,13 +121,13 @@ export const NotificationsComponent = () => {
             {filteredNotifications.map((notification, index) => (
               <div
                 key={notification.id}
-                className={`animate-slide-in-up border-l-4 border-l-orange-500 rounded-lg p-6 transition transform hover:shadow-lg cursor-default ${getNotificationColor(notification.type)}`}
+                className={`animate-slide-in-up border-l-4 border-l-orange-500 rounded-lg p-6 transition transform hover:shadow-lg cursor-default ${getNotificationColor(notification.type || '')}`}
                 style={{
                   animationDelay: `${index * 0.1}s`,
                 }}
               >
                 <div className="flex items-start gap-4">
-                  <div className="text-3xl">{getNotificationIcon(notification.type)}</div>
+                    <div className="text-3xl">{getNotificationIcon(notification.type || '')}</div>
                   <div className="flex-1">
                     <p className="font-bold text-gray-800 text-lg">{notification.message}</p>
                     <p className="text-sm text-gray-600 mt-1">

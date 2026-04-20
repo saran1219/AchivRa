@@ -1,0 +1,45 @@
+
+> student-achievement-system@1.0.0 build
+> next build
+
+(node:26348) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///S:/STUDENT_ACHIVEMENT/next.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to S:\STUDENT_ACHIVEMENT\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ▲ Next.js 14.2.35
+  - Environments: .env.local, .env.production
+
+   Creating an optimized production build ...
+(node:31840) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///S:/STUDENT_ACHIVEMENT/next.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to S:\STUDENT_ACHIVEMENT\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:34068) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///S:/STUDENT_ACHIVEMENT/next.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to S:\STUDENT_ACHIVEMENT\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:19544) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///S:/STUDENT_ACHIVEMENT/next.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to S:\STUDENT_ACHIVEMENT\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+Failed to compile.
+
+./src/app/faculty/students/[studentId]/page.tsx:64:41
+Type error: No overload matches this call.
+  Overload 1 of 2, '(storage: FirebaseStorage, url?: string | undefined): StorageReference', gave the following error.
+    Argument of type 'FirebaseStorage | null' is not assignable to parameter of type 'FirebaseStorage'.
+      Type 'null' is not assignable to type 'FirebaseStorage'.
+  Overload 2 of 2, '(storageOrRef: FirebaseStorage | StorageReference, path?: string | undefined): StorageReference', gave the following error.
+    Argument of type 'FirebaseStorage | null' is not assignable to parameter of type 'FirebaseStorage | StorageReference'.
+      Type 'null' is not assignable to type 'FirebaseStorage | StorageReference'.
+
+[0m [90m 62 |[39m                 } [36melse[39m {[0m
+[0m [90m 63 |[39m                   [36mtry[39m {[0m
+[0m[31m[1m>[22m[39m[90m 64 |[39m                     [36mconst[39m fileRef [33m=[39m ref(storage[33m,[39m storagePath)[33m;[39m[0m
+[0m [90m    |[39m                                         [31m[1m^[22m[39m[0m
+[0m [90m 65 |[39m                     fileURL [33m=[39m [36mawait[39m getDownloadURL(fileRef)[33m;[39m[0m
+[0m [90m 66 |[39m                   } [36mcatch[39m (e) {[0m
+[0m [90m 67 |[39m                     console[33m.[39merror([32m'Error fetching file URL for'[39m[33m,[39m storagePath[33m,[39m e)[33m;[39m[0m
+Next.js build worker exited with code: 1 and signal: null

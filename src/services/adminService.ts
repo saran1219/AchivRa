@@ -124,7 +124,7 @@ export const adminService = {
       const departmentAchievements = achievementsRaw.filter((a: any) => a.department === department);
       console.log(`Found ${departmentAchievements.length} achievements for ${department}`);
 
-      const achievements = departmentAchievements.map(data => {
+      const achievements = departmentAchievements.map((data: any) => {
         // Normalize fields if necessary (though we trust Firestore for now, logging helps)
         return {
           ...data,

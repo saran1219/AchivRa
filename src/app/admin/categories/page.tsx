@@ -24,9 +24,14 @@ export default function CategoriesPage() {
 
   useEffect(() => {
     const fetchCategories = async () => {
-      const data = await adminService.getCategories();
-      setCategories(data);
-      setCategoriesLoading(false);
+      try {
+        const data = await adminService.getCategories();
+        setCategories(data);
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      } finally {
+        setCategoriesLoading(false);
+      }
     };
     fetchCategories();
   }, []);

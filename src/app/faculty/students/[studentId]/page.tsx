@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Navbar, Sidebar, PageLayout } from '@/components/Layout';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { UserRole, Achievement } from '@/types';
+import { UserRole, Achievement, AchievementStatus } from '@/types';
 import { userService, UserProfile } from '@/services/userService';
 import { achievementService } from '@/services/achievementService';
 import { ModernBadge } from '@/components/ModernBadge';
@@ -12,9 +12,83 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { motion } from 'framer-motion';
-import { UserCircle, FileCheck, BarChart3, Activity, Eye, Download, FileText } from 'lucide-react';
+import { UserCircle, FileCheck, BarChart3, Activity, Eye, Download, FileText, PartyPopper, Target } from 'lucide-react';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/config/firebase';
+import { computeYearlyTargetProgress } from '@/utils/yearlyTargetProgress';
+import { filterAchievementsByTargetScope, type TargetScope } from '@/utils/targetScopeFilter';
+import { compareForVerificationQueue, isStaleHighPriorityPending } from '@/utils/achievementPriority';
+
+/** Half-ring progress: AchivRa blue (#001a4d) → green; Apple Watch–style stacked arcs. */
+function YearlyTargetSemiRings({
+  presentation,
+  technicalCompetition,
+  hackathon,
+  allComplete,
+}: {
+  presentation: boolean;
+  technicalCompetition: boolean;
+  hackathon: boolean;
+  allComplete: boolean;
+}) {
+  const cx = 72;
+  const cy = 74;
+  const stroke = 5;
+  const rings = [
+    { r: 24, done: presentation },
+    { r: 35, done: technicalCompetition },
+    { r: 46, done: hackathon },
+  ] as const;
+
+  return (
+    <motion.div
+      className="relative mx-auto w-full max-w-[200px] select-none"
+      animate={
+        allComplete
+          ? { scale: [1, 1.02, 1], opacity: [1, 0.98, 1] }
+          : { scale: 1, opacity: 1 }
+      }
+      transition={allComplete ? { duration: 2.4, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.2 }}
+    >
+      <svg viewBox="0 0 144 82" className="w-full h-auto drop-shadow-sm" aria-hidden>
+        <defs>
+          <linearGradient id="yearlyTargetRingGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#001a4d" />
+            <stop offset="55%" stopColor="#0d9488" />
+            <stop offset="100%" stopColor="#22c55e" />
+          </linearGradient>
+        </defs>
+        {rings.map(({ r, done }) => {
+          const arcLen = Math.PI * r;
+          const d = `M ${cx - r} ${cy} A ${r} ${r} 0 0 0 ${cx + r} ${cy}`;
+          return (
+            <g key={r}>
+              <path
+                d={d}
+                fill="none"
+                stroke="#e2e8f0"
+                strokeWidth={stroke}
+                strokeLinecap="round"
+                opacity={0.95}
+              />
+              <motion.path
+                d={d}
+                fill="none"
+                stroke="url(#yearlyTargetRingGrad)"
+                strokeWidth={stroke}
+                strokeLinecap="round"
+                strokeDasharray={arcLen}
+                initial={false}
+                animate={{ strokeDashoffset: done ? 0 : arcLen }}
+                transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
+              />
+            </g>
+          );
+        })}
+      </svg>
+    </motion.div>
+  );
+}
 
 export default function StudentDetailView() {
   const params = useParams();
@@ -27,6 +101,7 @@ export default function StudentDetailView() {
   const [loading, setLoading] = useState(true);
   const [indexError, setIndexError] = useState(false);
   const [generalError, setGeneralError] = useState(false);
+  const [targetScope, setTargetScope] = useState<TargetScope>('yearly');
 
   // Auth Protection
   useEffect(() => {
@@ -59,7 +134,7 @@ export default function StudentDetailView() {
               if (storagePath) {
                 if (storagePath.startsWith('http')) {
                   fileURL = storagePath;
-                } else {
+                } else if (storage) {
                   try {
                     const fileRef = ref(storage, storagePath);
                     fileURL = await getDownloadURL(fileRef);
@@ -159,6 +234,16 @@ export default function StudentDetailView() {
   );
   const recentActivity = sortedAchievements.slice(0, 5);
 
+  const scopedApprovedForTargets = filterAchievementsByTargetScope(
+    achievements.filter((a) => a.status === AchievementStatus.APPROVED),
+    targetScope
+  );
+  const yearlyTargets = computeYearlyTargetProgress(scopedApprovedForTargets);
+
+  const sortedCertificates = [...achievements].sort((a, b) =>
+    compareForVerificationQueue(a, b, 'newest')
+  );
+
   return (
     <>
       <Navbar />
@@ -255,6 +340,9 @@ export default function StudentDetailView() {
                     <span>Uploaded Certificates</span>
                     <span className="text-sm font-normal text-gray-400 ml-2">({achievements.length} total)</span>
                   </h3>
+                  <p className="text-xs text-gray-500 mb-4">
+                    Pending items over 3 days old are highlighted and listed first for follow-up.
+                  </p>
 
                   {achievements.length === 0 ? (
                     <div className="text-center py-12 text-gray-400 flex-1 flex flex-col items-center justify-center">
@@ -263,8 +351,19 @@ export default function StudentDetailView() {
                     </div>
                   ) : (
                     <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                      {achievements.map((achievement) => (
-                        <div key={achievement.id} className="p-4 border border-gray-100 rounded-xl hover:shadow-md transition-shadow bg-gray-50/50 flex flex-col sm:flex-row gap-4">
+                      {sortedCertificates.map((achievement) => {
+                        const urgent =
+                          achievement.status === AchievementStatus.PENDING &&
+                          isStaleHighPriorityPending(achievement);
+                        return (
+                        <div
+                          key={achievement.id}
+                          className={`p-4 rounded-xl hover:shadow-md transition-shadow bg-gray-50/50 flex flex-col sm:flex-row gap-4 ${
+                            urgent
+                              ? 'border-2 border-red-300/90 ring-1 ring-red-100'
+                              : 'border border-gray-100'
+                          }`}
+                        >
                           <div className="w-full sm:w-32 h-24 bg-gray-200 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden group relative">
                             {(achievement as any).fileURL ? (
                               (achievement as any).fileURL.includes('.pdf') || (achievement as any).certificateFile?.includes('.pdf') || achievement.certificateFileName?.includes('.pdf') ? (
@@ -313,13 +412,24 @@ export default function StudentDetailView() {
                               </div>
                               <p className="text-sm text-gray-600 truncate">{achievement.description}</p>
                             </div>
-                            <div className="flex items-center gap-4 mt-4 text-xs font-medium text-gray-500">
+                            <div className="flex flex-wrap items-center gap-2 mt-4 text-xs font-medium text-gray-500">
                               <span className="flex items-center gap-1">📍 {achievement.category}</span>
+                              {achievement.skillGroup && (
+                                <span className="px-2 py-0.5 rounded-full bg-[#001a4d]/10 text-[#001a4d] font-bold uppercase tracking-wide text-[10px]">
+                                  {achievement.skillGroup}
+                                </span>
+                              )}
+                              {urgent && (
+                                <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 font-bold uppercase text-[10px]">
+                                  High priority
+                                </span>
+                              )}
                               <span className="flex items-center gap-1">📅 {new Date(achievement.updatedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}</span>
                             </div>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </motion.div>
@@ -346,61 +456,142 @@ export default function StudentDetailView() {
                     <p>No achievements submitted yet to analyze.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="h-[260px] flex flex-col items-center">
-                      <h4 className="text-sm font-semibold text-gray-500 mb-2">Status Distribution</h4>
-                      <div className="w-full flex-1 min-h-0">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={statusData}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={60}
-                              outerRadius={80}
-                              paddingAngle={5}
-                              dataKey="value"
-                              stroke="none"
-                            >
-                              {statusData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                              ))}
-                            </Pie>
-                            <Tooltip
-                              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                            />
-                            <Legend iconType="circle" />
-                          </PieChart>
-                        </ResponsiveContainer>
+                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 xl:items-stretch">
+                    <div className="xl:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="h-[260px] flex flex-col items-center">
+                        <h4 className="text-sm font-semibold text-gray-500 mb-2">Status Distribution</h4>
+                        <div className="w-full flex-1 min-h-0">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={statusData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={60}
+                                outerRadius={80}
+                                paddingAngle={5}
+                                dataKey="value"
+                                stroke="none"
+                              >
+                                {statusData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                              />
+                              <Legend iconType="circle" />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                      <div className="h-[260px] flex flex-col items-center">
+                        <h4 className="text-sm font-semibold text-gray-500 mb-2">Achievements by Category</h4>
+                        <div className="w-full flex-1 min-h-0">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={categoryData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                              <XAxis
+                                dataKey="category"
+                                tick={{ fontSize: 12, fill: '#6B7280' }}
+                                axisLine={false}
+                                tickLine={false}
+                              />
+                              <YAxis
+                                allowDecimals={false}
+                                tick={{ fontSize: 12, fill: '#6B7280' }}
+                                axisLine={false}
+                                tickLine={false}
+                                width={30}
+                              />
+                              <Tooltip
+                                cursor={{ fill: 'rgba(59, 130, 246, 0.05)' }}
+                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                              />
+                              <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
                       </div>
                     </div>
-                    <div className="h-[260px] flex flex-col items-center">
-                      <h4 className="text-sm font-semibold text-gray-500 mb-2">Achievements by Category</h4>
-                      <div className="w-full flex-1 min-h-0">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={categoryData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                            <XAxis
-                              dataKey="category"
-                              tick={{ fontSize: 12, fill: '#6B7280' }}
-                              axisLine={false}
-                              tickLine={false}
-                            />
-                            <YAxis
-                              allowDecimals={false}
-                              tick={{ fontSize: 12, fill: '#6B7280' }}
-                              axisLine={false}
-                              tickLine={false}
-                              width={30}
-                            />
-                            <Tooltip
-                              cursor={{ fill: 'rgba(59, 130, 246, 0.05)' }}
-                              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                            />
-                            <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={50} />
-                          </BarChart>
-                        </ResponsiveContainer>
+
+                    <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-br from-[#f8fafc] via-white to-[#eef2ff] p-6 flex flex-col shadow-[0_4px_24px_-4px_rgba(15,23,42,0.08)] min-h-[200px] ring-1 ring-white/60 backdrop-blur-sm">
+                      <h4 className="text-sm font-bold text-[#001a4d] uppercase tracking-wide mb-1 flex items-center gap-2">
+                        <Target className="w-4 h-4 text-indigo-600" aria-hidden />
+                        Yearly Target Progress
+                      </h4>
+                      <p className="text-xs text-slate-500 mb-3 leading-relaxed">
+                        Tracks approved work toward Presentation, Technical Competition, and Hackathon
+                        (e.g. Paper Presentation, Coding Competition, Hackathon).
+                      </p>
+
+                      <div
+                        className="flex rounded-xl bg-slate-100/90 p-1 mb-4 gap-1"
+                        role="group"
+                        aria-label="Target period"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setTargetScope('yearly')}
+                          className={`flex-1 min-w-0 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                            targetScope === 'yearly'
+                              ? 'bg-white text-[#001a4d] shadow-sm'
+                              : 'text-slate-500 hover:text-slate-700'
+                          }`}
+                        >
+                          Yearly targets
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTargetScope('semester')}
+                          className={`flex-1 min-w-0 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                            targetScope === 'semester'
+                              ? 'bg-white text-[#001a4d] shadow-sm'
+                              : 'text-slate-500 hover:text-slate-700'
+                          }`}
+                        >
+                          Semester targets
+                        </button>
                       </div>
+                      <p className="text-[10px] text-slate-400 mb-3">
+                        Yearly: approved submissions in the current calendar year. Semester: Jan–Jun or Jul–Dec (by submitted date).
+                      </p>
+
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-3 text-center">
+                        Progress rings
+                      </p>
+                      <div className="mb-5 rounded-2xl bg-white/70 border border-slate-100/90 px-4 py-5 shadow-inner">
+                        <YearlyTargetSemiRings
+                          presentation={yearlyTargets.presentation}
+                          technicalCompetition={yearlyTargets.technicalCompetition}
+                          hackathon={yearlyTargets.hackathon}
+                          allComplete={yearlyTargets.allComplete}
+                        />
+                      </div>
+
+                      <ul className="space-y-2.5 flex-1 border-t border-slate-100 pt-4">
+                        {(
+                          [
+                            { key: 'presentation', label: 'Presentation', done: yearlyTargets.presentation },
+                            { key: 'technicalCompetition', label: 'Technical Competition', done: yearlyTargets.technicalCompetition },
+                            { key: 'hackathon', label: 'Hackathon', done: yearlyTargets.hackathon },
+                          ] as const
+                        ).map((item) => (
+                          <li key={item.key} className="rounded-lg px-2 py-1.5 -mx-2 hover:bg-white/60 transition-colors">
+                            <span
+                              className={`text-sm ${item.done ? 'text-slate-900 font-semibold' : 'text-slate-500 font-medium'}`}
+                            >
+                              {item.label}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      {yearlyTargets.allComplete && (
+                        <div className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200/60 px-4 py-3 text-emerald-900 shadow-sm">
+                          <PartyPopper className="w-5 h-5 flex-shrink-0 text-emerald-600" aria-hidden />
+                          <span className="text-sm font-bold">Yearly Target Completed</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
@@ -447,8 +638,19 @@ export default function StudentDetailView() {
                             </div>
                             <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-gray-500">
                               <span className="flex items-center gap-1"><FileCheck className="w-3.5 h-3.5" /> {achievement.category}</span>
+                              {achievement.skillGroup && (
+                                <span className="text-[10px] font-bold uppercase text-[#001a4d] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                                  {achievement.skillGroup}
+                                </span>
+                              )}
                               <span className="flex items-center gap-1">📅 {new Date(achievement.updatedAt || achievement.submittedAt || new Date()).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}</span>
                             </div>
+                            {achievement.remarks && (achievement.status === 'approved' || achievement.status === 'rejected') && (
+                              <div className="mt-3 text-xs text-slate-700 bg-amber-50/80 border border-amber-100 rounded-lg px-3 py-2">
+                                <span className="font-bold text-amber-900 uppercase tracking-wide text-[10px] block mb-1">Faculty remarks</span>
+                                <span className="italic">&ldquo;{achievement.remarks}&rdquo;</span>
+                              </div>
+                            )}
                           </div>
 
                           {achievement.certificateUrl && (

@@ -13,7 +13,8 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage, auth } from '@/config/firebase';
-import { Achievement, AchievementStatus } from '@/types';
+import { Achievement, AchievementStatus, SkillGroup } from '@/types';
+import { sortAchievementsForVerificationQueue } from '@/utils/achievementPriority';
 
 export const achievementService = {
   // Create new achievement
@@ -29,7 +30,8 @@ export const achievementService = {
     department: string,
     tags: string[] = [],
     fileUrls: string[] = [],
-    fileNames: string[] = []
+    fileNames: string[] = [],
+    skillGroup: string = SkillGroup.TECHNICAL
   ) {
     try {
       if (!db) throw new Error('Firestore database not initialized');
@@ -40,6 +42,7 @@ export const achievementService = {
         title,
         description,
         category,
+        skillGroup,
         organizationName,
         eventDate: Timestamp.fromDate(eventDate),
         certificateUrl: fileUrls.length > 0 ? fileUrls[0] : '', // Backward compatibility
@@ -48,6 +51,7 @@ export const achievementService = {
         fileNames, // New field for file names
         certificateSize: 0,
         status: AchievementStatus.PENDING,
+        priority: 'normal',
         remarks: '',
         verifiedBy: '',
         verifiedByName: '',
@@ -66,8 +70,33 @@ export const achievementService = {
     }
   },
 
+  // Upload single certificate (Exact implementation requested by user)
+  async uploadCertificate(file: File, userId: string) {
+    try {
+      if (!storage) throw new Error('Cloud Storage not initialized');
+      const fileRef = ref(
+        storage, 
+        `certificates/${userId}/${Date.now()}_${file.name}`
+      );
+
+      console.log('Uploading file:', file.name);
+      const snapshot = await uploadBytes(fileRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+
+      return downloadURL;
+    } catch (error) {
+      console.error('Upload failed:', error);
+      throw error;
+    }
+  },
+
   // Upload multiple certificate files
-  async uploadCertificates(achievementId: string, studentId: string, files: File[]) {
+  async uploadCertificates(
+    achievementId: string, 
+    studentId: string, 
+    files: File[],
+    onProgress?: (progress: number) => void
+  ) {
     try {
       if (!storage) throw new Error('Cloud Storage not initialized');
       if (!db) throw new Error('Firestore database not initialized');
@@ -75,16 +104,23 @@ export const achievementService = {
       const fileUrls: string[] = [];
       const fileNames: string[] = [];
       
+      let totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+      let bytesTransferredSoFar = 0;
+
       for (const file of files) {
-        const filePath = `certificates/${studentId}/${achievementId}_${file.name}`;
-        const storageRef = ref(storage, filePath);
-        await uploadBytes(storageRef, file);
-        try {
-          const downloadURL = await getDownloadURL(storageRef);
-          fileUrls.push(downloadURL);
-          fileNames.push(file.name);
-        } catch(error) {
-          console.warn("File not found in storage:", filePath);
+        if (!file) {
+          alert('No file selected');
+          throw new Error('No file selected');
+        }
+
+        const downloadURL = await this.uploadCertificate(file, studentId);
+        fileUrls.push(downloadURL);
+        fileNames.push(file.name);
+        
+        // Update progress manually
+        bytesTransferredSoFar += file.size;
+        if (onProgress) {
+          onProgress((bytesTransferredSoFar / totalBytes) * 100);
         }
       }
       
@@ -151,10 +187,7 @@ export const achievementService = {
         verificationDate: doc.data().verificationDate?.toDate() || null,
       })) as Achievement[];
       
-      // Sort by submittedAt in descending order (newest first)
-      return achievements.sort((a, b) => 
-        new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-      );
+      return sortAchievementsForVerificationQueue(achievements);
     } catch (error) {
       console.error('Error fetching pending achievements:', error);
       return [];
@@ -180,10 +213,7 @@ export const achievementService = {
         verificationDate: doc.data().verificationDate?.toDate() || null,
       })) as Achievement[];
       
-      // Sort by submittedAt in descending order (newest first)
-      return achievements.sort((a, b) => 
-        new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-      );
+      return sortAchievementsForVerificationQueue(achievements);
     } catch (error) {
       console.error('Error fetching pending achievements by department:', error);
       return [];
@@ -276,6 +306,7 @@ export const achievementService = {
         verifiedBy: currentUser.uid,
         verifiedByName: userData.name || 'Verification Team',
         verificationDate: status !== AchievementStatus.PENDING ? Timestamp.now() : null,
+        priority: 'normal',
         updatedAt: Timestamp.now(),
       });
     } catch (error) {

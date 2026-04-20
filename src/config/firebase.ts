@@ -1,75 +1,28 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, Auth, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore, Firestore, connectFirestoreEmulator } from 'firebase/firestore';
-import { getStorage, FirebaseStorage, connectStorageEmulator } from 'firebase/storage';
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getStorage, FirebaseStorage } from "firebase/storage";
 
-// Log environment variables directly to see what Next.js is passing to the client
-console.log('--- Firebase Initialization: Checking Environment Variables ---');
-console.log('NEXT_PUBLIC_FIREBASE_API_KEY:', process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? '(Set)' : 'undefined');
-console.log('NEXT_PUBLIC_FIREBASE_PROJECT_ID:', process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'undefined');
-console.log('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:', process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'undefined');
-console.log('-----------------------------------------------------------');
-
-// Use environment variables with fallbacks for runtime access
+// 🔥 SIMPLE & CLEAN CONFIG (NO COMPLEX LOGIC)
 const firebaseConfig = {
-  apiKey: typeof window !== 'undefined' ? 
-    (window as any).__FIREBASE_API_KEY__ || process.env.NEXT_PUBLIC_FIREBASE_API_KEY : 
-    process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: typeof window !== 'undefined' ? 
-    (window as any).__FIREBASE_AUTH_DOMAIN__ || process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'achivra-883bf.firebaseapp.com' : 
-    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'achivra-883bf.firebaseapp.com',
-  projectId: typeof window !== 'undefined' ? 
-    (window as any).__FIREBASE_PROJECT_ID__ || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID : 
-    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: typeof window !== 'undefined' ? 
-    (window as any).__FIREBASE_STORAGE_BUCKET__ || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET : 
-    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: typeof window !== 'undefined' ? 
-    (window as any).__FIREBASE_MESSAGING_SENDER_ID__ || process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID : 
-    process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: typeof window !== 'undefined' ? 
-    (window as any).__FIREBASE_APP_ID__ || process.env.NEXT_PUBLIC_FIREBASE_APP_ID : 
-    process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
+  storageBucket: "achivra-883bf.firebasestorage.app", // ✅ FIXED (IMPORTANT)
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
 };
 
-// Validate config
-const isValidConfig = Object.values(firebaseConfig).every(val => val && val !== '');
+// 🔥 INIT APP (SAFE INIT)
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-let auth: Auth | null = null;
-let db: Firestore | null = null;
-let storage: FirebaseStorage | null = null;
+// 🔥 SERVICES
+const auth: Auth = getAuth(app);
+const db: Firestore = getFirestore(app);
+const storage: FirebaseStorage = getStorage(app);
 
-if (isValidConfig) {
-  try {
-    // Initialize Firebase - check if already initialized
-    let app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-    
-    auth = getAuth(app);
-    db = getFirestore(app);
-    storage = getStorage(app);
-    
-    // Set auth persistence
-    if (typeof window !== 'undefined') {
-      // Configure auth settings for better error handling
-      auth.useDeviceLanguage();
-      console.log('🔧 Firebase Auth Domain configured as:', firebaseConfig.authDomain);
-    }
-    
-    console.log('✅ Firebase initialized successfully for project:', firebaseConfig.projectId);
-  } catch (error: any) {
-    console.error('❌ Firebase initialization error:', error?.message || error);
-  }
-}
-
-if (!auth) {
-  console.warn('⚠️ Firebase not initialized. Check your environment variables.');
-  console.warn('Config:', {
-    apiKey: firebaseConfig.apiKey ? '***' : 'missing',
-    authDomain: firebaseConfig.authDomain || 'missing',
-    projectId: firebaseConfig.projectId || 'missing',
-    storageBucket: firebaseConfig.storageBucket || 'missing',
-  });
-}
+// 🔥 DEBUG (OPTIONAL)
+console.log("✅ Firebase initialized:", firebaseConfig.projectId);
 
 export { auth, db, storage };
 export type { Auth, Firestore, FirebaseStorage };

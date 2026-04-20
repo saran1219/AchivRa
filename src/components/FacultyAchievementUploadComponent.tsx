@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { achievementService } from '@/services/achievementService';
 import { adminService } from '@/services/adminService';
 import { notificationService } from '@/services/notificationService';
-import { AchievementStatus } from '@/types';
+import { AchievementStatus, SkillGroup } from '@/types';
 
 interface Toast {
   message: string;
@@ -29,6 +29,7 @@ export const FacultyAchievementUploadComponent = () => {
     organizationName: '',
     eventDate: '',
     tags: '' as string,
+    skillGroup: SkillGroup.TECHNICAL,
   });
 
   const [file, setFile] = useState<File | null>(null);
@@ -124,17 +125,16 @@ export const FacultyAchievementUploadComponent = () => {
         formData.organizationName,
         new Date(formData.eventDate),
         user.department,
-        formData.tags ? formData.tags.split(',').map(t => t.trim()) : []
+        formData.tags ? formData.tags.split(',').map(t => t.trim()) : [],
+        [],
+        [],
+        formData.skillGroup
       );
 
-      // Simulate upload progress
-      for (let i = 0; i <= 100; i += 10) {
-        setUploadProgress(i);
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
       // Upload certificate
-      await achievementService.uploadCertificate(achievementId, formData.studentId, file);
+      await achievementService.uploadCertificates(achievementId, formData.studentId, [file], (progress) => {
+        setUploadProgress(Math.round(progress));
+      });
 
       // Automatically approve faculty-uploaded achievements
       await achievementService.updateAchievementStatus(
@@ -147,12 +147,13 @@ export const FacultyAchievementUploadComponent = () => {
       );
 
       // Send notification to student
-      await notificationService.createNotification(
-        formData.studentId,
-        `🎉 Faculty ${user.name} has added a new achievement: "${formData.title}" to your profile and it's already APPROVED!`,
-        'approval',
-        achievementId
-      );
+      await notificationService.addNotification({
+        recipientId: formData.studentId,
+        type: 'result',
+        title: 'Achievement Approved',
+        message: `🎉 Faculty ${user.name} added "${formData.title}" to your profile and it is already APPROVED!`,
+        relatedAchievementId: achievementId,
+      });
 
       addToast('✓ Achievement uploaded and approved successfully!', 'success');
       
@@ -167,6 +168,7 @@ export const FacultyAchievementUploadComponent = () => {
         organizationName: '',
         eventDate: '',
         tags: '',
+        skillGroup: SkillGroup.TECHNICAL,
       });
       setFile(null);
       setPreview('');
@@ -288,6 +290,21 @@ export const FacultyAchievementUploadComponent = () => {
                   ))}
                 </select>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-3">Skill group *</label>
+              <select
+                required
+                aria-label="Skill group"
+                value={formData.skillGroup}
+                onChange={(e) => setFormData({ ...formData, skillGroup: e.target.value as SkillGroup })}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+              >
+                <option value={SkillGroup.TECHNICAL}>Technical</option>
+                <option value={SkillGroup.PROFESSIONAL}>Professional</option>
+                <option value={SkillGroup.SOFT_SKILLS}>Soft Skills</option>
+              </select>
             </div>
 
             <div>

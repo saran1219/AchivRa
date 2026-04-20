@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { achievementService } from '@/services/achievementService';
 import { notificationService } from '@/services/notificationService';
 import { Achievement, AchievementStatus } from '@/types';
+import { compareForVerificationQueue, isStaleHighPriorityPending } from '@/utils/achievementPriority';
 
 interface Toast {
   message: string;
@@ -75,12 +76,7 @@ export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: Ve
       );
     }
 
-    // Sort by date
-    const sorted = [...filtered].sort((a, b) => {
-      const dateA = new Date(a.submittedAt).getTime();
-      const dateB = new Date(b.submittedAt).getTime();
-      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
-    });
+    const sorted = [...filtered].sort((a, b) => compareForVerificationQueue(a, b, sortOrder));
 
     return sorted;
   };
@@ -101,13 +97,12 @@ export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: Ve
         user.role // Passing role
       );
 
-      // Send notification to student
-      await notificationService.createNotification(
-        selectedAchievement.studentId,
-        `🎉 Your achievement "${selectedAchievement.title}" has been APPROVED by ${user.name} (${user.department || 'Verification Team'})!`,
-        'approval',
-        selectedAchievement.id
-      );
+      await notificationService.addNotification({
+        recipientId: selectedAchievement.studentId,
+        type: 'result',
+        title: 'Achievement Approved',
+        message: 'Your achievement has been approved'
+      });
 
       addToast('✓ Achievement approved!', 'success');
       setSelectedAchievement(null);
@@ -137,13 +132,12 @@ export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: Ve
         user.role // Passing role
       );
 
-      // Send notification to student
-      await notificationService.createNotification(
-        selectedAchievement.studentId,
-        `⚠️ Your achievement "${selectedAchievement.title}" has been REJECTED by ${user.name} (${user.department || 'Verification Team'}). Remarks: ${remarks}`,
-        'rejection',
-        selectedAchievement.id
-      );
+      await notificationService.addNotification({
+        recipientId: selectedAchievement.studentId,
+        type: 'result',
+        title: 'Achievement Rejected',
+        message: 'Your achievement has been rejected'
+      });
 
       addToast('✓ Achievement rejected!', 'success');
       setSelectedAchievement(null);
@@ -272,14 +266,18 @@ export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: Ve
                 </div>
               ) : (
                 <div className="overflow-y-auto flex-1 p-3 space-y-3 custom-scrollbar">
-                    {getFilteredAndSortedAchievements().map((achievement) => (
+                    {getFilteredAndSortedAchievements().map((achievement) => {
+                      const urgent = achievement.status === 'pending' && isStaleHighPriorityPending(achievement);
+                      return (
                       <button
                         key={achievement.id}
                         onClick={() => setSelectedAchievement(achievement)}
                         className={`w-full text-left p-4 rounded-xl transition-all duration-300 border-2 relative group ${
                           selectedAchievement?.id === achievement.id
                             ? 'bg-[#001a4d] text-white border-[#001a4d] shadow-lg scale-[1.02] z-10'
-                            : 'bg-white text-gray-700 border-gray-100 hover:border-yellow-400 hover:shadow-md'
+                            : urgent
+                              ? 'bg-white text-gray-700 border-red-300/90 hover:border-red-400 hover:shadow-md shadow-sm ring-1 ring-red-100'
+                              : 'bg-white text-gray-700 border-gray-100 hover:border-yellow-400 hover:shadow-md'
                         }`}
                       >
                         <div className="flex items-start gap-4">
@@ -295,7 +293,7 @@ export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: Ve
                             <p className={`text-xs font-medium ${selectedAchievement?.id === achievement.id ? 'text-blue-200' : 'text-gray-500'}`}>
                               {achievement.studentName}
                             </p>
-                            <div className="flex items-center gap-2 mt-2">
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
                                <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold ${
                                  selectedAchievement?.id === achievement.id 
                                   ? 'bg-yellow-400 text-[#001a4d]' 
@@ -303,6 +301,11 @@ export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: Ve
                                }`}>
                                  {new Date(achievement.submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                </span>
+                               {urgent && selectedAchievement?.id !== achievement.id && (
+                                 <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide bg-red-50 text-red-700 border border-red-200">
+                                   High priority
+                                 </span>
+                               )}
                             </div>
                           </div>
                           {selectedAchievement?.id === achievement.id && (
@@ -310,7 +313,8 @@ export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: Ve
                           )}
                         </div>
                       </button>
-                    ))}
+                    );
+                    })}
                 </div>
               )}
             </div>
@@ -491,13 +495,19 @@ export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: Ve
                   <div className="border-t border-gray-100 p-6 bg-gray-50 flex-shrink-0">
                     <h3 className="text-sm font-bold text-[#001a4d] mb-3 uppercase tracking-wider">Verification Actions</h3>
                     <div className="flex flex-col gap-4">
-                       <textarea
-                        value={remarks}
-                        onChange={(e) => setRemarks(e.target.value)}
-                        placeholder="Add remarks or feedback for the student..."
-                        rows={2}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#001a4d] focus:ring-1 focus:ring-[#001a4d] text-sm resize-none bg-white transition-shadow focus:shadow-md"
-                      />
+                      <div>
+                        <label htmlFor="faculty-remarks-verification" className="block text-xs font-bold text-[#001a4d] uppercase tracking-wider mb-2">
+                          Faculty remarks
+                        </label>
+                        <textarea
+                          id="faculty-remarks-verification"
+                          value={remarks}
+                          onChange={(e) => setRemarks(e.target.value)}
+                          placeholder="Visible to the student on their achievement timeline after you approve or reject."
+                          rows={3}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#001a4d] focus:ring-1 focus:ring-[#001a4d] text-sm resize-none bg-white transition-shadow focus:shadow-md"
+                        />
+                      </div>
                       <div className="flex gap-4">
                         <button
                           onClick={handleApprove}
@@ -588,7 +598,9 @@ export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: Ve
             {/* Modal Content */}
             <div className="flex-1 overflow-y-auto p-8 bg-gray-50 custom-scrollbar">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {achievements.map((achievement) => (
+                {getFilteredAndSortedAchievements().map((achievement) => {
+                  const urgentModal = achievement.status === 'pending' && isStaleHighPriorityPending(achievement);
+                  return (
                   <div
                     key={achievement.id}
                     onClick={() => {
@@ -596,7 +608,9 @@ export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: Ve
                       setShowAllModal(false);
                     }}
                     className={`bg-white p-5 rounded-xl border-2 hover:shadow-xl transition-all duration-300 cursor-pointer group hover:-translate-y-1 ${
-                      achievement.status === 'pending'
+                      urgentModal
+                        ? 'border-red-300 ring-1 ring-red-100 hover:border-red-400'
+                        : achievement.status === 'pending'
                         ? 'border-yellow-200 hover:border-yellow-400'
                         : achievement.status === 'approved'
                         ? 'border-green-200 hover:border-green-400'
@@ -636,7 +650,8 @@ export const VerificationDashboardComponent = ({ initialFilter = 'pending' }: Ve
                       </div>
                     </div>
                   </div>
-                ))}
+                );
+                })}
               </div>
 
               {achievements.length === 0 && (

@@ -1,0 +1,45 @@
+
+> student-achievement-system@1.0.0 build
+> next build
+
+(node:16648) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///S:/STUDENT_ACHIVEMENT/next.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to S:\STUDENT_ACHIVEMENT\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ▲ Next.js 14.2.35
+  - Environments: .env.local, .env.production
+
+   Creating an optimized production build ...
+(node:22296) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///S:/STUDENT_ACHIVEMENT/next.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to S:\STUDENT_ACHIVEMENT\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Failed to compile.
+
+./src/app/faculty/dashboard/page.tsx
+Module not found: Can't resolve 'recharts'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./src/app/faculty/students/[studentId]/page.tsx
+Module not found: Can't resolve 'recharts'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./src/app/faculty/students/[studentId]/page.tsx
+Module not found: Can't resolve 'framer-motion'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./src/app/faculty/students/[studentId]/page.tsx
+Module not found: Can't resolve 'lucide-react'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./src/app/student/achievements/page.tsx
+Module not found: Can't resolve 'recharts'
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+> Build failed because of webpack errors

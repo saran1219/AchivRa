@@ -1,0 +1,39 @@
+
+> student-achievement-system@1.0.0 build
+> next build
+
+(node:30832) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///S:/STUDENT_ACHIVEMENT/next.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to S:\STUDENT_ACHIVEMENT\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ▲ Next.js 14.2.35
+  - Environments: .env.local, .env.production
+
+   Creating an optimized production build ...
+(node:25084) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///S:/STUDENT_ACHIVEMENT/next.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to S:\STUDENT_ACHIVEMENT\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:33156) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///S:/STUDENT_ACHIVEMENT/next.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to S:\STUDENT_ACHIVEMENT\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3728) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///S:/STUDENT_ACHIVEMENT/next.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to S:\STUDENT_ACHIVEMENT\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+Failed to compile.
+
+./src/services/adminService.ts:131:27
+Type error: Property 'eventDate' does not exist on type '{ id: string; }'.
+
+[0m [90m 129 |[39m         [36mreturn[39m {[0m
+[0m [90m 130 |[39m           [33m...[39mdata[33m,[39m[0m
+[0m[31m[1m>[22m[39m[90m 131 |[39m           eventDate[33m:[39m data[33m.[39meventDate[33m?[39m[33m.[39mtoDate() [33m||[39m [36mnew[39m [33mDate[39m()[33m,[39m[0m
+[0m [90m     |[39m                           [31m[1m^[22m[39m[0m
+[0m [90m 132 |[39m           submittedAt[33m:[39m data[33m.[39msubmittedAt[33m?[39m[33m.[39mtoDate() [33m||[39m [36mnew[39m [33mDate[39m()[33m,[39m[0m
+[0m [90m 133 |[39m           updatedAt[33m:[39m data[33m.[39mupdatedAt[33m?[39m[33m.[39mtoDate() [33m||[39m [36mnew[39m [33mDate[39m()[33m,[39m[0m
+[0m [90m 134 |[39m           verificationDate[33m:[39m data[33m.[39mverificationDate[33m?[39m[33m.[39mtoDate() [33m||[39m [36mnull[39m[33m,[39m[0m
+Next.js build worker exited with code: 1 and signal: null

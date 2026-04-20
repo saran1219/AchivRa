@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { achievementService } from '@/services/achievementService';
 import { notificationService } from '@/services/notificationService';
 import { adminService } from '@/services/adminService';
-import { AchievementStatus, UserRole } from '@/types';
+import { AchievementStatus, SkillGroup, UserRole } from '@/types';
 
 interface Toast {
   message: string;
@@ -149,17 +149,16 @@ export const StudentUploadComponent = () => {
         formData.organizationName,
         new Date(formData.eventDate),
         user.department || '',
-        formData.tags ? formData.tags.split(',').map(t => t.trim()) : []
+        formData.tags ? formData.tags.split(',').map(t => t.trim()) : [],
+        [],
+        [],
+        formData.skillGroup
       );
 
-      // Simulate upload progress
-      for (let i = 0; i <= 100; i += 10) {
-        setUploadProgress(i);
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
       // Upload certificate
-      await achievementService.uploadCertificate(achievementId, user.id, file);
+      await achievementService.uploadCertificates(achievementId, user.id, [file], (progress) => {
+        setUploadProgress(Math.round(progress));
+      });
 
       // Notify faculty members
       const facultyMembers = await adminService.getCategories(); // Get faculty list
@@ -173,6 +172,7 @@ export const StudentUploadComponent = () => {
         organizationName: '',
         eventDate: '',
         tags: '',
+        skillGroup: SkillGroup.TECHNICAL,
       });
       setFile(null);
       setPreview('');
@@ -254,6 +254,21 @@ export const StudentUploadComponent = () => {
                   ))}
                 </select>
               </div>
+            </div>
+
+            <div className="group">
+              <label className="block text-sm font-bold text-gray-700 mb-3">Skill group *</label>
+              <select
+                required
+                aria-label="Skill group"
+                value={formData.skillGroup}
+                onChange={(e) => setFormData({ ...formData, skillGroup: e.target.value as SkillGroup })}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:shadow-lg transition group-hover:border-blue-300"
+              >
+                <option value={SkillGroup.TECHNICAL}>Technical</option>
+                <option value={SkillGroup.PROFESSIONAL}>Professional</option>
+                <option value={SkillGroup.SOFT_SKILLS}>Soft Skills</option>
+              </select>
             </div>
 
             {/* Description */}

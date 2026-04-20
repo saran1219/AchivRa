@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { achievementService } from '@/services/achievementService';
 import { adminService } from '@/services/adminService';
 import { notificationService } from '@/services/notificationService';
-import { Achievement } from '@/types';
+import { Achievement, SkillGroup } from '@/types';
 
 interface Toast {
   message: string;
@@ -33,6 +33,7 @@ export const StudentSubmitCertificateComponent = () => {
     organizationName: '',
     eventDate: '',
     tags: '' as string,
+    skillGroup: SkillGroup.TECHNICAL,
   });
 
   useEffect(() => {
@@ -148,7 +149,10 @@ export const StudentSubmitCertificateComponent = () => {
         formData.organizationName,
         new Date(formData.eventDate),
         user.department || '',
-        formData.tags ? formData.tags.split(',').map(t => t.trim()) : []
+        formData.tags ? formData.tags.split(',').map(t => t.trim()) : [],
+        [],
+        [],
+        formData.skillGroup
       );
 
       // Simulate initial progress
@@ -156,11 +160,20 @@ export const StudentSubmitCertificateComponent = () => {
 
       // Upload certificates
       addToast(`📎 Uploading ${files.length} file(s)...`, 'info');
-      await achievementService.uploadCertificates(achievementId, user.id, files);
+      await achievementService.uploadCertificates(achievementId, user.id, files, (progress) => {
+        setUploadProgress(Math.round(progress));
+      });
       
       setUploadProgress(100);
 
-      // Send notification to faculty in same department
+      // Send notification to verification team
+      await notificationService.addNotification({
+        recipientId: 'all_verification_team',
+        type: 'submission',
+        title: 'New Achievement Submitted',
+        message: `New achievement submitted by ${studentName} for ${formData.category}`,
+      });
+
       addToast('✓ Achievement submitted successfully!', 'success');
       
       // Reload submitted achievements to show the new submission
@@ -174,6 +187,7 @@ export const StudentSubmitCertificateComponent = () => {
         organizationName: '',
         eventDate: '',
         tags: '',
+        skillGroup: SkillGroup.TECHNICAL,
       });
       setFiles([]);
       setUploadProgress(0);
@@ -257,6 +271,22 @@ export const StudentSubmitCertificateComponent = () => {
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-[#001a4d] mb-2 uppercase tracking-wide">Skill group *</label>
+              <select
+                required
+                aria-label="Skill group"
+                title="Skill group for categorization"
+                value={formData.skillGroup}
+                onChange={(e) => setFormData({ ...formData, skillGroup: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#001a4d] focus:ring-0 text-gray-700 transition-all font-medium bg-gray-50 focus:bg-white appearance-none cursor-pointer"
+              >
+                <option value={SkillGroup.TECHNICAL}>Technical</option>
+                <option value={SkillGroup.PROFESSIONAL}>Professional</option>
+                <option value={SkillGroup.SOFT_SKILLS}>Soft Skills</option>
+              </select>
             </div>
 
             {/* Row 2: Organization + Date */}
@@ -462,7 +492,7 @@ export const StudentSubmitCertificateComponent = () => {
                   {/* Remarks */}
                   {achievement.remarks && (
                     <div className="mt-4 pt-3 border-t border-gray-100 pl-9">
-                      <p className="text-xs font-bold text-[#001a4d] uppercase tracking-wide mb-1 opacity-70">Faculty Feedback</p>
+                      <p className="text-xs font-bold text-[#001a4d] uppercase tracking-wide mb-1 opacity-70">Faculty remarks</p>
                       <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-100 italic">"{achievement.remarks}"</p>
                     </div>
                   )}

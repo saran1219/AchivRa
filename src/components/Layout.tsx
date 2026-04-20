@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { UserRole } from '@/types';
 import { ModernButton } from './ModernButton';
 import { ModernBadge } from './ModernBadge';
+import { NotificationBell } from './NotificationBell';
 
 export const Navbar = () => {
   const { user, logout } = useAuth();
@@ -50,6 +51,11 @@ export const Navbar = () => {
                 <ModernBadge variant="default" size="sm" className="!bg-white/10 !text-yellow-400 border border-yellow-400/20">
                   📍 {user.department}
                 </ModernBadge>
+              )}
+
+              {/* Notification Bell for specific roles */}
+              {(user.role === UserRole.STUDENT || user.role === UserRole.VERIFICATION_TEAM) && (
+                <NotificationBell />
               )}
 
               {/* Logout Button */}
