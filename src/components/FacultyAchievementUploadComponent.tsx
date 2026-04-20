@@ -29,7 +29,7 @@ export const FacultyAchievementUploadComponent = () => {
     organizationName: '',
     eventDate: '',
     tags: '' as string,
-    skillGroup: SkillGroup.TECHNICAL,
+    skillGroup: SkillGroup.TECHNICAL as SkillGroup,
   });
 
   const [file, setFile] = useState<File | null>(null);
@@ -168,7 +168,7 @@ export const FacultyAchievementUploadComponent = () => {
         organizationName: '',
         eventDate: '',
         tags: '',
-        skillGroup: SkillGroup.TECHNICAL,
+        skillGroup: SkillGroup.TECHNICAL as SkillGroup,
       });
       setFile(null);
       setPreview('');

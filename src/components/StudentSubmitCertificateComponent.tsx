@@ -33,7 +33,7 @@ export const StudentSubmitCertificateComponent = () => {
     organizationName: '',
     eventDate: '',
     tags: '' as string,
-    skillGroup: SkillGroup.TECHNICAL,
+    skillGroup: SkillGroup.TECHNICAL as SkillGroup,
   });
 
   useEffect(() => {
@@ -280,7 +280,7 @@ export const StudentSubmitCertificateComponent = () => {
                 aria-label="Skill group"
                 title="Skill group for categorization"
                 value={formData.skillGroup}
-                onChange={(e) => setFormData({ ...formData, skillGroup: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, skillGroup: e.target.value as SkillGroup })}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#001a4d] focus:ring-0 text-gray-700 transition-all font-medium bg-gray-50 focus:bg-white appearance-none cursor-pointer"
               >
                 <option value={SkillGroup.TECHNICAL}>Technical</option>
